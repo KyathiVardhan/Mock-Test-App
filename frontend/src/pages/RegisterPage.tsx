@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { Scale, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function RegisterPage() {
@@ -179,7 +179,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#d5a661] hover:bg-[#8d672e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#d5a661] hover:bg-[#8d6933] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Creating account...' : 'Create account'}f
               </button>

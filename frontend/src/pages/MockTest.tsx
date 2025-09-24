@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle } from 'lucide-react';
 
 interface Question {
   id: number;
@@ -86,7 +86,7 @@ export default function MockTest() {
   }, [category]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     if (testStarted && timeLeft > 0) {
       timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
     } else if (timeLeft === 0) {
