@@ -11,7 +11,7 @@ export interface IUser extends Document {
     isVerified: boolean;
     createdAt: Date;
     updatedAt: Date;
-    comparePassword(candidatePassword: string): Promise<boolean>;
+    // comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 // Interface for User input (registration)

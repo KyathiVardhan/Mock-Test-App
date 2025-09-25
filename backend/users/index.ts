@@ -5,6 +5,9 @@ import cookieParser from 'cookie-parser';
 import { registerUser } from "./controller/userRegistration";
 import { connectDB } from "./db/db";
 import { loginUser } from "./controller/userLogin";
+import testRoutes from "./routes/testRoutes";
+import { registerTest } from "./controller/testReservation";
+import { validateTestRegistration } from "./middleware/testValidation";
 
 const app = express();
 
@@ -19,6 +22,8 @@ connectDB();
 
 app.use("/api/register", registerUser);
 app.use("/api/login", loginUser);
+app.use("/api/tests", testRoutes);
+
 
 // Logout endpoint
 app.post("/api/logout", (req, res) => {
