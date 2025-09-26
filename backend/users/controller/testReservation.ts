@@ -18,7 +18,18 @@ export const registerTest = async (req: Request, res: Response) => {
             return;
         }
 
-        const { subject, questions, duration, price } = req.body;
+        const { subject, questions, duration, price, category } = req.body;
+
+        // Validate top-level category
+        if (!category || typeof category !== 'string') {
+            res.status(400).json({ success: false, message: 'Category is required' });
+            return;
+        }
+        const normalizedCategory = String(category).toUpperCase();
+        if (!['BASIC', 'INTERMEDIATE', 'ADVANCED'].includes(normalizedCategory)) {
+            res.status(400).json({ success: false, message: 'Category must be BASIC, INTERMEDIATE, or ADVANCED' });
+            return;
+        }
 
         // Validate questions structure
         if (!questions || !Array.isArray(questions) || questions.length === 0) {
@@ -53,11 +64,16 @@ export const registerTest = async (req: Request, res: Response) => {
         const existingTest = await Test.findOne({ subject: subject.toUpperCase() });
         
         if (existingTest) {
-            // Add new questions to existing test
-            console.log(`Adding ${questions.length} questions to existing ${subject.toUpperCase()} test`);
+            // Add new questions to existing test under selected category
+            console.log(`Adding ${questions.length} ${normalizedCategory} questions to existing ${subject.toUpperCase()} test`);
             
-            // Append new questions to existing questions array
-            existingTest.questions.push(...questions);
+            if (normalizedCategory === 'BASIC') {
+                existingTest.basicQuestions.push(...questions);
+            } else if (normalizedCategory === 'INTERMEDIATE') {
+                existingTest.intermediateQuestions.push(...questions);
+            } else {
+                existingTest.advancedQuestions.push(...questions);
+            }
             
             // Update duration and price if provided (optional - you can modify this logic)
             if (duration) {
@@ -71,11 +87,11 @@ export const registerTest = async (req: Request, res: Response) => {
 
             res.status(200).json({
                 success: true,
-                message: `Successfully added ${questions.length} questions to existing ${subject.toUpperCase()} test`,
+                message: `Successfully added ${questions.length} ${normalizedCategory} questions to existing ${subject.toUpperCase()} test`,
                 data: {
                     _id: updatedTest._id,
                     subject: updatedTest.subject,
-                    totalQuestions: updatedTest.questions.length,
+                    totalQuestions: (updatedTest.basicQuestions?.length || 0) + (updatedTest.intermediateQuestions?.length || 0) + (updatedTest.advancedQuestions?.length || 0),
                     newQuestionsAdded: questions.length,
                     duration: updatedTest.duration,
                     price: updatedTest.price,
@@ -90,7 +106,9 @@ export const registerTest = async (req: Request, res: Response) => {
         
         const newTest = new Test({
             subject: subject.toUpperCase(),
-            questions,
+            basicQuestions: normalizedCategory === 'BASIC' ? questions : [],
+            intermediateQuestions: normalizedCategory === 'INTERMEDIATE' ? questions : [],
+            advancedQuestions: normalizedCategory === 'ADVANCED' ? questions : [],
             duration: duration || 1.5, // Default 1.5 minutes per question
             price: price || 0
         });
@@ -103,7 +121,7 @@ export const registerTest = async (req: Request, res: Response) => {
             data: {
                 _id: savedTest._id,
                 subject: savedTest.subject,
-                totalQuestions: savedTest.questions.length,
+                totalQuestions: (savedTest.basicQuestions?.length || 0) + (savedTest.intermediateQuestions?.length || 0) + (savedTest.advancedQuestions?.length || 0),
                 duration: savedTest.duration,
                 price: savedTest.price,
                 createdAt: savedTest.createdAt

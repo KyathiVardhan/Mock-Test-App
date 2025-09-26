@@ -3,6 +3,7 @@ import { registerTest } from '../controller/testReservation';
 import { validateTestRegistration } from '../middleware/testValidation';
 import { authenticateToken } from '../middleware/isAuth';
 import { getAllTests } from '../controller/getAllTests';
+import { getQuestionsByDifficulty, getSubjectDifficulties } from '../controller/testController';
 // import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -18,9 +19,8 @@ router.post("/register", validateTestRegistration, registerTest);
 // Get all tests
 router.get("/all-tests", authenticateToken, getAllTests);
 
-// Get test by subject
-router.get("/:subject", (req, res) => {
-    // Your get test by subject logic here
-});
+// Subject difficulties and questions by difficulty
+router.get("/subject/:subject/difficulties", getSubjectDifficulties);
+router.get("/subject/:subject/difficulty/:difficulty", getQuestionsByDifficulty);
 
 export default router;
