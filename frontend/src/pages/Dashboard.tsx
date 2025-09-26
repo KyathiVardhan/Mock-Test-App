@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { BookOpen, Clock, Trophy, TrendingUp, Play, Crown, Zap } from 'lucide-react';
