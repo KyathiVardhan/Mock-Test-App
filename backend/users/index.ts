@@ -6,6 +6,7 @@ import { registerUser } from "./controller/userRegistration";
 import { connectDB } from "./db/db";
 import { loginUser } from "./controller/userLogin";
 import testRoutes from "./routes/testRoutes";
+import adminRoutes from '../users/routes/adminRoutes'
 import { registerTest } from "./controller/testReservation";
 import { validateTestRegistration } from "./middleware/testValidation";
 
@@ -23,6 +24,7 @@ connectDB();
 app.use("/api/register", registerUser);
 app.use("/api/login", loginUser);
 app.use("/api/tests", testRoutes);
+app.use("/api/admin/", adminRoutes);
 
 
 // Logout endpoint
