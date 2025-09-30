@@ -4,17 +4,14 @@ import { validateTestRegistration } from '../middleware/testValidation';
 import { authenticateToken } from '../middleware/isAuth';
 import { getAllTests } from '../controller/getAllTests';
 import { getQuestionsByDifficulty, getSubjectDifficulties } from '../controller/testController';
+import { isAdminAuth } from '../middleware/adminAuthMiddleware';
 // import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // Test routes
 // POST endpoint to create a new test
-router.post("/register", validateTestRegistration, registerTest);
-// GET endpoint to get all tests
-// router.get("/", async (req, res) => {
-//     res.status(200).json({ message: "Get all tests endpoint" });
-// });
+router.post("/register", isAdminAuth, validateTestRegistration, registerTest);
 
 // Get all tests
 router.get("/all-tests", authenticateToken, getAllTests);

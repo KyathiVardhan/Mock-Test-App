@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Shield, Lock, Mail, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function AdminPage() {
   const [email, setEmail] = useState('');
@@ -10,40 +11,19 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const { adminLogin } = useAuth();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      if (data.success) {
-        // Store admin token/info if needed
-        localStorage.setItem('adminToken', data.data.token);
-        localStorage.setItem('adminUser', JSON.stringify(data.data.user));
-        
-        // Navigate to admin dashboard
-        navigate('/admin/dashboard');
-      } else {
-        setError(data.message || 'Invalid admin credentials');
-      }
+      await adminLogin(email, password);
+      navigate('/admin/dashboard');
     } catch (err: any) {
-      console.error('Admin login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ interface Question {
   options: string[];
   correctAnswer: number;
   explanation: string;
+  originalIndex?: number; // To track original position for scoring
 }
 
 interface TestData {
@@ -32,12 +33,23 @@ export default function MockTest() {
   
   const [testData, setTestData] = useState<TestData | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [originalQuestions, setOriginalQuestions] = useState<Question[]>([]); // Store original order
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number }>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [testStarted, setTestStarted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Fisher-Yates shuffle algorithm
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array]; // Create a copy to avoid mutating original
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
 
   // Fetch test data from API
   useEffect(() => {
@@ -71,7 +83,19 @@ export default function MockTest() {
         }
 
         setTestData(apiResponse.data);
-        setQuestions(apiResponse.data.questions);
+        
+        // Store original questions and add original index
+        const questionsWithIndex = apiResponse.data.questions.map((q, index) => ({
+          ...q,
+          originalIndex: index
+        }));
+        
+        setOriginalQuestions(questionsWithIndex);
+        
+        // Shuffle questions randomly
+        const shuffledQuestions = shuffleArray(questionsWithIndex);
+        setQuestions(shuffledQuestions);
+        
         setTimeLeft(apiResponse.data.duration * 60); // Convert minutes to seconds
 
       } catch (err: any) {
@@ -132,7 +156,8 @@ export default function MockTest() {
         score, 
         total: questions.length, 
         answers: selectedAnswers, 
-        questions,
+        questions: questions, // Pass shuffled questions
+        originalQuestions: originalQuestions, // Pass original order
         testData,
         subject,
         difficulty
@@ -148,6 +173,15 @@ export default function MockTest() {
       }
     });
     return score;
+  };
+
+  // Shuffle questions again if user wants to restart
+  const handleShuffleQuestions = () => {
+    const shuffled = shuffleArray(originalQuestions);
+    setQuestions(shuffled);
+    setCurrentQuestion(0);
+    setSelectedAnswers({});
+    console.log('Questions reshuffled!');
   };
 
   const getDifficultyColor = (level: string) => {
@@ -235,7 +269,7 @@ export default function MockTest() {
               {testData.difficulty} Level
             </div>
             <p className="text-gray-600 mt-4">
-              You're about to start a {testData.difficulty.toLowerCase()} level test. Please read the instructions carefully.
+              You're about to start a {testData.difficulty.toLowerCase()} level test. Questions will appear in random order.
             </p>
           </div>
 
@@ -246,6 +280,7 @@ export default function MockTest() {
                 <li>• {testData.totalQuestions} multiple choice questions</li>
                 <li>• {testData.duration} minutes time limit</li>
                 <li>• {testData.difficulty} difficulty level</li>
+                <li>• <strong>Questions appear in random order</strong></li>
                 <li>• You can navigate between questions</li>
               </ul>
             </div>
@@ -257,17 +292,28 @@ export default function MockTest() {
                 <li>• Select only one answer per question</li>
                 <li>• You can review and change answers</li>
                 <li>• Submit when finished or time expires</li>
+                <li>• Questions are shuffled for fairness</li>
               </ul>
             </div>
           </div>
 
-          <div className="text-center">
+          <div className="text-center space-y-4">
             <button
               onClick={handleStartTest}
               className="bg-amber-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-amber-700 transition-colors shadow-lg"
             >
               Start {testData.difficulty} Test
             </button>
+            
+            {/* Optional: Add shuffle button for practice */}
+            <div className="text-sm text-gray-500">
+              <button
+                onClick={handleShuffleQuestions}
+                className="text-amber-600 hover:text-amber-700 underline"
+              >
+                Shuffle questions again
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -287,6 +333,9 @@ export default function MockTest() {
               <span className="text-sm font-medium text-gray-600">
                 Question {currentQuestion + 1} of {questions.length}
               </span>
+              <div className="text-xs text-gray-500">
+                (Randomized Order)
+              </div>
               <div className={`text-xs px-2 py-1 rounded-full font-semibold capitalize ${getDifficultyColor(testData.difficulty)} bg-opacity-10`}>
                 {testData.subject} • {testData.difficulty}
               </div>
@@ -307,8 +356,13 @@ export default function MockTest() {
 
       {/* Question */}
       <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-8 mb-6">
-        <div className="mb-4">
-          <span className="text-sm text-gray-500">Question {questions[currentQuestion]?.questionNumber}</span>
+        <div className="mb-4 flex justify-between items-center">
+          <span className="text-sm text-gray-500">
+            Question {currentQuestion + 1}
+          </span>
+          <span className="text-xs text-gray-400">
+            ID: {questions[currentQuestion]?.id?.slice(-6) || 'N/A'}
+          </span>
         </div>
         <h2 className="text-xl font-semibold text-gray-900 mb-6">
           {questions[currentQuestion]?.question}

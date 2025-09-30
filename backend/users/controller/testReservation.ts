@@ -3,10 +3,18 @@ import { validationResult } from 'express-validator';
 import { Test } from '../models/TestCollection'; // Adjust path as needed
 
 // Register new Test content or add questions to existing test
-export const registerTest = async (req: Request, res: Response) => {
+export const registerTest = async (req: any, res: Response) => {
     try {
         console.log('Received request body:', req.body);
         
+        // Check if request is from an authenticated admin
+        if (!req.admin || req.admin.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can register tests'
+            });
+        }
+
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             console.log('Validation errors:', errors.array());

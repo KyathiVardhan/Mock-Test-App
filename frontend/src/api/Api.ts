@@ -10,9 +10,28 @@ export interface AuthResponse {
     id: string;
     avatar: string;
     isVerified: boolean;
+    subscription: string;
+    testsCompleted: number;
   };
   token?: string;
 }
+
+interface AdminLoginData {
+  email: string;
+  password: string;
+}
+
+interface AdminAuthResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    email: string;
+    role: string;
+    loginTime?: string;
+  };
+  token?: string;
+}
+
 
 export const api = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
@@ -60,5 +79,86 @@ export const api = {
     if (!response.ok) {
       throw new Error('Logout failed');
     }
+  },
+  adminLogin: async (email: string, password: string): Promise<AdminAuthResponse> => {
+    const response = await fetch(`${BASE_URL}/admin/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Admin login failed');
+    }
+
+    // Store the admin token if it exists in the response
+    if (data.token) {
+      localStorage.setItem('adminToken', data.token);
+    }
+
+    return data;
+  },
+  adminLogout: async (): Promise<void> => {
+    const response = await fetch(`${BASE_URL}/admin/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Admin logout failed');
+    }
+  },
+
+  adminApiCall: async (endpoint: string, options: RequestInit = {}): Promise<any> => {
+    const adminToken = localStorage.getItem('adminToken');
+    
+    const response = await fetch(`${BASE_URL}/admin${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': adminToken ? `Bearer ${adminToken}` : '',
+        ...options.headers,
+      },
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Admin API call failed');
+    }
+
+    return data;
+  },
+
+  registerTest: async (testData: any): Promise<any> => {
+    const adminToken = localStorage.getItem('adminToken');
+    
+    const response = await fetch(`${BASE_URL}/test/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify(testData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Test registration failed');
+    }
+
+    return data;
   }
 };

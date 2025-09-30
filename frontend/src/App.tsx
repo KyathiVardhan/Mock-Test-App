@@ -11,7 +11,9 @@ import TestResults from './pages/TestResults';
 import Subscription from './pages/Subscription';
 import Profile from './pages/Profile';
 import DifficultySelection from './pages/DifficultySelection';
-import AdminPage from './pages/adminPage';
+import AdminPage from './pages/AdminPage';
+import { PrivateRoute } from './components/PrivateRoute';
+import AdminDashboard from './pages/AdminDashboard';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -62,6 +64,12 @@ function App() {
             <Route path="/adminPage" element={
               <PublicRoute>
                 <AdminPage />
+              </PublicRoute>
+            } />
+
+            <Route path='/admin/dashboard' element={
+              <PublicRoute>
+                <AdminDashboard/>
               </PublicRoute>
             } />
             <Route path="/register" element={

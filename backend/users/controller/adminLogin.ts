@@ -105,3 +105,13 @@ export const loginAdmin = async (req: Request, res: Response) => {
         });
     }
 };
+
+export const logoutAdmin = async (req: Request, res: Response) => {
+    
+    res.clearCookie('token');
+    res.status(200).json({
+        success: true,
+        message: 'Logged out successfully'
+    });
+    
+};
