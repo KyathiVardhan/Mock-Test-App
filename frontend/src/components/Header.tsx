@@ -25,16 +25,16 @@ export default function Header() {
           <nav className="hidden md:flex items-center space-x-6">
             {user ? (
               <>
-                <Link to="/dashboard" className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
+                <Link to="/dashboard" className="flex items-center space-x-1 text-[#d5a661] hover:text-white transition-colors">
                   <Home className="h-4 w-4" />
                   <span>Dashboard</span>
                 </Link>
-                <Link to="/subscription" className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
+                <Link to="/subscription" className="flex items-center space-x-1 text-[#d5a661] hover:text-white transition-colors">
                   <BookOpen className="h-4 w-4" />
                   <span>Subscription</span>
                 </Link>
                 <div className="relative group">
-                  <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
+                  <button className="flex items-center space-x-2 text-[#d5a661] hover:text-white transition-colors">
                     <User className="h-4 w-4" />
                     <span>{user.name}</span>
                     <div className={`px-2 py-1 text-xs rounded-full ${
@@ -45,14 +45,14 @@ export default function Header() {
                       {user.subscription}
                     </div>
                   </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <Link to="/profile" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <div className="absolute right-0 mt-2 w-48 bg-[#3C222F] rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <Link to="/profile" className="flex items-center px-4 py-2 text-sm text-[#d5a661] hover:text-white">
                       <User className="h-4 w-4 mr-2" />
                       Profile
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center w-full px-4 py-2 text-sm text-[#d5a661] hover:text-white"
                     >
                       <LogOut className="h-4 w-4 mr-2" />
                       Logout

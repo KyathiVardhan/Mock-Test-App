@@ -8,7 +8,7 @@ export const getAllTests = async (req: Request, res: Response) => {
 
         // Get all tests with basic information (excluding questions for performance)
         const tests = await Test.find({})
-            .select('subject duration price createdAt updatedAt')
+            .select('subject duration price createdAt updatedAt basicQuestions intermediateQuestions advancedQuestions')
             .sort({ subject: 1, createdAt: -1 }); // Sort by subject alphabetically, then by newest first
 
         if (!tests || tests.length === 0) {
@@ -20,20 +20,25 @@ export const getAllTests = async (req: Request, res: Response) => {
         }
 
         // Calculate total questions for each test
-        const testsWithQuestionCount = await Promise.all(
-            tests.map(async (test) => {
-                const fullTest = await Test.findById(test._id).select('questions');
-                return {
-                    _id: test._id,
-                    subject: test.subject,
-                    totalQuestions: fullTest?.questions.length || 0,
-                    duration: test.duration,
-                    price: test.price,
-                    createdAt: test.createdAt,
-                    updatedAt: test.updatedAt
-                };
-            })
-        );
+        const testsWithQuestionCount = tests.map((test) => {
+            const basicCount = (test as any).basicQuestions?.length || 0;
+            const intermediateCount = (test as any).intermediateQuestions?.length || 0;
+            const advancedCount = (test as any).advancedQuestions?.length || 0;
+            return {
+                _id: test._id,
+                subject: test.subject,
+                totalQuestions: basicCount + intermediateCount + advancedCount,
+                breakdown: {
+                    BASIC: basicCount,
+                    INTERMEDIATE: intermediateCount,
+                    ADVANCED: advancedCount
+                },
+                duration: test.duration,
+                price: test.price,
+                createdAt: test.createdAt,
+                updatedAt: test.updatedAt
+            };
+        });
 
         res.status(200).json({
             success: true,

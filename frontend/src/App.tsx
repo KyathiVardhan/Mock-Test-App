@@ -10,10 +10,14 @@ import MockTest from './pages/MockTest';
 import TestResults from './pages/TestResults';
 import Subscription from './pages/Subscription';
 import Profile from './pages/Profile';
+import DifficultySelection from './pages/DifficultySelection';
+import AdminPage from './pages/AdminPage';
+import { PrivateRoute } from './components/PrivateRoute';
+import AdminDashboard from './pages/AdminDashboard';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   // Show loading spinner while checking authentication
   if (loading) {
     return (
@@ -22,14 +26,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   // Only redirect to login if we're sure the user is not authenticated
   return user ? <>{children}</> : <Navigate to="/login" />;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   // Show loading spinner while checking authentication
   if (loading) {
     return (
@@ -38,7 +42,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   // If user is logged in, redirect to dashboard
   return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 }
@@ -56,6 +60,18 @@ function App() {
                 <LoginPage />
               </PublicRoute>
             } />
+            
+            <Route path="/adminPage" element={
+              <PublicRoute>
+                <AdminPage />
+              </PublicRoute>
+            } />
+
+            <Route path='/admin/dashboard' element={
+              <PublicRoute>
+                <AdminDashboard/>
+              </PublicRoute>
+            } />
             <Route path="/register" element={
               <PublicRoute>
                 <RegisterPage />
@@ -66,16 +82,22 @@ function App() {
                 <Dashboard />
               </ProtectedRoute>
             } />
-            <Route path="/test/:category" element={
-              <ProtectedRoute>
-                <MockTest />
-              </ProtectedRoute>
-            } />
+            
             <Route path="/results/:testId" element={
               <ProtectedRoute>
                 <TestResults />
               </ProtectedRoute>
             } />
+
+            {/* New routes for difficulty selection and tests */}
+            <Route
+              path="/test/:subject"
+              element={<ProtectedRoute><DifficultySelection /></ProtectedRoute>}
+            />
+            <Route
+              path="/test/:subject/difficulty/:difficulty"
+              element={<ProtectedRoute><MockTest /></ProtectedRoute>}
+            />
             <Route path="/subscription" element={
               <ProtectedRoute>
                 <Subscription />

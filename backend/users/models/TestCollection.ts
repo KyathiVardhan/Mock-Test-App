@@ -11,7 +11,9 @@ export interface IQuestion {
 export interface ITest extends Document {
     _id: string;
     subject: string;
-    questions: IQuestion[];
+    basicQuestions: IQuestion[];
+    intermediateQuestions: IQuestion[];
+    advancedQuestions: IQuestion[];
     duration: number;
     price: number;
     createdAt: Date;
@@ -83,15 +85,20 @@ const TestSchema = new Schema<ITest>({
         trim: true,
         uppercase: true,
     },
-    questions: {
+    basicQuestions: {
         type: [QuestionSchema],
         required: true,
-        validate: {
-            validator: function(questions: IQuestion[]) {
-                return questions.length > 0;
-            },
-            message: 'Test must have at least one question'
-        }
+        default: []
+    },
+    intermediateQuestions: {
+        type: [QuestionSchema],
+        required: true,
+        default: []
+    },
+    advancedQuestions: {
+        type: [QuestionSchema],
+        required: true,
+        default: []
     },
     duration: {
         type: Number,

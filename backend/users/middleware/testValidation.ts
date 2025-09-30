@@ -8,6 +8,13 @@ export const validateTestRegistration = [
         .isLength({ min: 2, max: 50 })
         .withMessage('Subject must be between 2-50 characters'),
     
+    body('category')
+        .isString()
+        .notEmpty()
+        .withMessage('Category is required')
+        .isIn(['BASIC', 'INTERMEDIATE', 'ADVANCED', 'basic', 'intermediate', 'advanced'])
+        .withMessage('Category must be BASIC, INTERMEDIATE, or ADVANCED'),
+    
     body('questions')
         .isArray({ min: 1 })
         .withMessage('Questions array is required with at least one question'),

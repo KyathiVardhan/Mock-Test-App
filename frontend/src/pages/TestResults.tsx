@@ -1,4 +1,3 @@
-import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { CheckCircle, XCircle, Home, RotateCcw, Share2 } from 'lucide-react';
 
