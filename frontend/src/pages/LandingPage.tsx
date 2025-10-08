@@ -1,7 +1,12 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle, Users, Award, BookOpen, ArrowRight, Star } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from 'react';
 
 export default function LandingPage() {
+
+  
+
   const features = [
     {
       icon: BookOpen,
@@ -22,24 +27,27 @@ export default function LandingPage() {
 
   const testimonials = [
     {
-      name: 'Sarah Chen',
+      name: 'Priya Sharma',
       role: 'Corporate Lawyer',
       content: 'LegalMock helped me pass my bar exam with confidence. The questions are incredibly realistic.',
       rating: 5
     },
     {
-      name: 'Michael Torres',
+      name: 'Rajesh Kumar',
       role: 'Criminal Defense Attorney',
       content: 'The best legal test prep platform I\'ve used. Highly recommend for any legal professional.',
       rating: 5
     },
     {
-      name: 'Emily Rodriguez',
+      name: 'Meera Joshi',
       role: 'Family Law Attorney',
       content: 'Excellent resource for staying sharp and preparing for certifications.',
       rating: 5
     }
   ];
+
+  const { isAuthenticated, user, admin } = useAuth();
+  
 
   return (
     <div className="min-h-screen">
@@ -55,19 +63,31 @@ export default function LandingPage() {
               Prepare for bar exams, certifications, and advance your legal career with our comprehensive mock test platform designed specifically for legal professionals.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/register"
-                className="bg-[#d5a661] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-amber-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
-              >
-                Start Free Trial
-              </Link>
-              <Link
-                to="/login"
-                className="bg-white text-[#d5a661] border-2 border-[#d5a661] px-8 py-4 rounded-lg text-lg font-semibold hover:bg-amber-50 transition-colors flex items-center"
-              >
-                Sign In
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
+              {!isAuthenticated ? (
+                <>
+                  <Link
+                    to="/register"
+                    className="bg-[#d5a661] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-amber-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                  >
+                    Start Free Trial
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="bg-white text-[#d5a661] border-2 border-[#d5a661] px-8 py-4 rounded-lg text-lg font-semibold hover:bg-amber-50 transition-colors flex items-center"
+                  >
+                    Sign In
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  to={admin ? '/admin/dashboard' : '/dashboard'}
+                  className="bg-[#d5a661] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-amber-700 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center"
+                >
+                  Go to Dashboard
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              )}            
             </div>
           </div>
         </div>
@@ -78,7 +98,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why Choose LegalMock?
+              Why Choose Edvantage Digital?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Built by legal professionals, for legal professionals. Get the edge you need to succeed.

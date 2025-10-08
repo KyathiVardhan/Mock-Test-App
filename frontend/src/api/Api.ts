@@ -156,25 +156,5 @@ export const api = {
     }
   },
 
-  // Generic admin API call helper
-  // adminApiCall: async (endpoint: string, options: RequestInit = {}): Promise<any> => {
-  //   const response = await fetch(`${BASE_URL}/admin${endpoint}`, {
-  //     ...options,
-  //     headers: {
-  //       'Content-Type': 'application/json',
-  //       ...options.headers,
-  //     },
-  //     credentials: 'include',
-  //   });
-
-  //   const data = await response.json();
-
-  //   if (!response.ok) {
-  //     const error = new Error(data.message || 'Admin API call failed');
-  //     (error as any).response = { data };
-  //     throw error;
-  //   }
-
-  //   return data;
-  // }
+  
 };

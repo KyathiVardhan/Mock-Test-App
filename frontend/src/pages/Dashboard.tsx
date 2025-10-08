@@ -114,9 +114,10 @@ export default function Dashboard() {
   };
 
   const recentTests = [
-    { id: '1', category: 'MATHS', score: 85, date: '2 days ago' },
-    { id: '2', category: 'PHYSICS', score: 92, date: '1 week ago' },
-    { id: '3', category: 'CHEMISTRY', score: 78, date: '2 weeks ago' }
+    { id: '1', category: 'CrPC LAW',  date: '2 days ago' },
+    { id: '2', category: 'IPC-LAW',  date: '1 week ago' },
+    { id: '3', category: 'CRIMINAL-LAW',  date: '5 days ago' }
+    
   ];
 
   const getSubscriptionLimits = () => {
@@ -350,13 +351,7 @@ export default function Dashboard() {
                       <p className="font-medium text-gray-900 text-sm">{test.category}</p>
                       <p className="text-xs text-gray-600">{test.date}</p>
                     </div>
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${
-                      test.score >= 80 ? 'bg-green-100 text-green-800' :
-                      test.score >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {test.score}%
-                    </div>
+                    
                   </div>
                 ))}
               </div>

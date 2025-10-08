@@ -9,6 +9,7 @@ export interface IUser extends Document {
     password: string;
     avatar?: string;
     isVerified: boolean;
+    subscription: string,
     createdAt: Date;
     updatedAt: Date;
     // comparePassword(candidatePassword: string): Promise<boolean>;
@@ -20,6 +21,7 @@ export interface IUserInput {
     email: string;
     password: string;
     avatar?: string;
+    
 }
 
 // User Schema
@@ -54,7 +56,13 @@ const userSchema = new Schema<IUser>({
     },
     isVerified: {
         type: Boolean,
+        
         default: false
+    },
+    subscription: {
+        type: String,
+        trim: true,
+        default: 'free'
     }
 }, {
     timestamps: true,

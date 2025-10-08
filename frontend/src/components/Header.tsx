@@ -19,7 +19,7 @@ export default function Header() {
             <div className="bg-[#d5a661] p-2 rounded-lg">
               <Scale className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-white">LegalMock</span>
+            <span className="text-xl font-bold text-white">Edvantage Digital</span>
           </Link>
 
           <nav className="hidden md:flex items-center space-x-6">

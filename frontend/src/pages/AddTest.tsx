@@ -72,6 +72,8 @@ const AddTest = () => {
     { value: 'property-law', label: 'Property Law' },
     { value: 'family-law', label: 'Family Law' },
     { value: 'administrative-law', label: 'Administrative Law' },
+    { value: 'ipc-law', label: 'IPC Law' },
+    { value: 'crpc-law', label: 'CrPC Law' },
     { value: 'environmental-law', label: 'Environmental Law' },
     { value: 'international-law', label: 'International Law' },
     { value: 'labor-law', label: 'Labor Law' },
@@ -537,11 +539,11 @@ const AddTest = () => {
         <div className="bg-white p-4 rounded border font-mono text-sm">
           <div className="grid grid-cols-7 gap-2 text-center">
             <div className="font-semibold text-gray-700">Question</div>
-            <div className="font-semibold text-gray-700">Option A</div>
-            <div className="font-semibold text-gray-700">Option B</div>
-            <div className="font-semibold text-gray-700">Option C</div>
-            <div className="font-semibold text-gray-700">Option D</div>
-            <div className="font-semibold text-gray-700">Correct</div>
+            <div className="font-semibold text-gray-700">A</div>
+            <div className="font-semibold text-gray-700">B</div>
+            <div className="font-semibold text-gray-700">C</div>
+            <div className="font-semibold text-gray-700">D</div>
+            <div className="font-semibold text-gray-700">correct answer</div>
             <div className="font-semibold text-gray-700">Explanation</div>
           </div>
           <hr className="my-2" />
@@ -551,7 +553,7 @@ const AddTest = () => {
             <div>Second option</div>
             <div>Third option</div>
             <div>Fourth option</div>
-            <div>A/B/C/D</div>
+            <div>answer</div>
             <div>Answer explanation</div>
           </div>
         </div>

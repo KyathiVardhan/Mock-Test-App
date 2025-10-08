@@ -73,9 +73,9 @@ function AdminDashboard() {
     return (
         <div className="flex h-screen bg-gray-50">
             {/* Sidebar */}
-            <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-lg transition-all duration-300 ease-in-out`}>
+            <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-lg transition-all mx-3 duration-300 ease-in-out relative flex flex-col`}>
                 {/* Sidebar Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
                     <div className={`${sidebarOpen ? 'block' : 'hidden'}`}>
                         <h2 className="text-xl font-bold text-gray-800">Law Exam Admin</h2>
                         <p className="text-sm text-gray-600">Mock Test Platform</p>
@@ -89,7 +89,7 @@ function AdminDashboard() {
                 </div>
 
                 {/* Navigation Menu */}
-                <nav className="mt-6">
+                <nav className="mt-6 flex-1 overflow-y-auto">
                     <ul className="space-y-2 px-3">
                         {menuItems.map((item) => (
                             <li key={item.path}>
@@ -113,7 +113,7 @@ function AdminDashboard() {
                 </nav>
 
                 {/* Sidebar Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
+                <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
                     <button
                         onClick={handleLogout}
                         className={`flex items-center w-full p-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 ${

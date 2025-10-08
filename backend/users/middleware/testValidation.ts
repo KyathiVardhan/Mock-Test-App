@@ -10,7 +10,7 @@ export const validateTestRegistration = [
         .isIn([
             'constitutional-law', 'criminal-law', 'civil-law', 'corporate-law',
             'contract-law', 'property-law', 'family-law', 'administrative-law',
-            'environmental-law', 'international-law', 'labor-law', 'tax-law'
+            'environmental-law', 'international-law', 'ipc-law', 'crpc-law', 'labor-law', 'tax-law'
         ])
         .withMessage('Invalid subject'),
     
