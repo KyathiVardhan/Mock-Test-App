@@ -36,6 +36,7 @@ export default function MockTest() {
   const [originalQuestions, setOriginalQuestions] = useState<Question[]>([]); // Store original order
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number }>({});
+  const [visitedQuestions, setVisitedQuestions] = useState<Set<number>>(new Set([0])); // Track visited questions, start with question 0
   const [timeLeft, setTimeLeft] = useState(0);
   const [testStarted, setTestStarted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -139,14 +140,26 @@ export default function MockTest() {
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+      const nextQuestion = currentQuestion + 1;
+      setCurrentQuestion(nextQuestion);
+      // Mark the new question as visited
+      setVisitedQuestions(prev => new Set([...prev, nextQuestion]));
     }
   };
 
   const handlePrevious = () => {
     if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
+      const prevQuestion = currentQuestion - 1;
+      setCurrentQuestion(prevQuestion);
+      // Mark the previous question as visited
+      setVisitedQuestions(prev => new Set([...prev, prevQuestion]));
     }
+  };
+
+  const handleQuestionNavigation = (questionIndex: number) => {
+    setCurrentQuestion(questionIndex);
+    // Mark the question as visited
+    setVisitedQuestions(prev => new Set([...prev, questionIndex]));
   };
 
   const handleSubmitTest = () => {
@@ -181,6 +194,7 @@ export default function MockTest() {
     setQuestions(shuffled);
     setCurrentQuestion(0);
     setSelectedAnswers({});
+    setVisitedQuestions(new Set([0])); // Reset visited questions
     console.log('Questions reshuffled!');
   };
 
@@ -200,6 +214,23 @@ export default function MockTest() {
       'advanced': 'bg-red-50 border-red-200'
     };
     return colors[level?.toLowerCase() as keyof typeof colors] || 'bg-gray-50 border-gray-200';
+  };
+
+  // Function to get question button styling
+  const getQuestionButtonStyle = (index: number) => {
+    const isAnswered = selectedAnswers[index] !== undefined;
+    const isCurrent = index === currentQuestion;
+    const isVisited = visitedQuestions.has(index);
+
+    if (isCurrent) {
+      return 'bg-amber-600 text-white'; // Current question (amber)
+    } else if (isAnswered) {
+      return 'bg-green-500 text-white hover:bg-green-600'; // Answered (green)
+    } else if (isVisited) {
+      return 'bg-red-500 text-white hover:bg-red-600'; // Visited but not answered (red)
+    } else {
+      return 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'; // Not visited (white)
+    }
   };
 
   // Loading state
@@ -433,16 +464,8 @@ export default function MockTest() {
             {questions.map((_, index) => (
               <button
                 key={index}
-                onClick={() => setCurrentQuestion(index)}
-                className={`w-10 h-10 rounded-lg text-sm font-semibold transition-colors ${
-                  selectedAnswers[index] !== undefined
-                    ? index === currentQuestion
-                      ? 'bg-green-600 text-white'
-                      : 'bg-green-100 text-green-800'
-                    : index === currentQuestion
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                onClick={() => handleQuestionNavigation(index)}
+                className={`w-10 h-10 rounded-lg text-sm font-semibold transition-colors ${getQuestionButtonStyle(index)}`}
               >
                 {index + 1}
               </button>
@@ -450,7 +473,7 @@ export default function MockTest() {
           </div>
           <div className="flex items-center space-x-4 mt-3 text-xs text-gray-500">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-100 rounded mr-1"></div>
+              <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
               <span>Answered</span>
             </div>
             <div className="flex items-center">
@@ -458,16 +481,42 @@ export default function MockTest() {
               <span>Current</span>
             </div>
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-gray-100 rounded mr-1"></div>
-              <span>Unanswered</span>
+              <div className="w-3 h-3 bg-red-500 rounded mr-1"></div>
+              <span>Visited but Unanswered</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-white border border-gray-300 rounded mr-1"></div>
+              <span>Not Visited</span>
             </div>
           </div>
 
           {/* Progress Stats */}
           <div className="mt-4 pt-4 border-t border-amber-200">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Answered: {Object.keys(selectedAnswers).length}/{questions.length}</span>
-              <span>Remaining: {questions.length - Object.keys(selectedAnswers).length}</span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="flex justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-500">Answered:</span>
+                <span className="font-semibold text-green-600">
+                  {Object.keys(selectedAnswers).length}
+                </span>
+              </div>
+              <div className="flex justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-500">Visited:</span>
+                <span className="font-semibold text-blue-600">
+                  {visitedQuestions.size}
+                </span>
+              </div>
+              <div className="flex justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-500">Skipped:</span>
+                <span className="font-semibold text-red-600">
+                  {visitedQuestions.size - Object.keys(selectedAnswers).length}
+                </span>
+              </div>
+              <div className="flex justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-500">Remaining:</span>
+                <span className="font-semibold text-gray-600">
+                  {questions.length - visitedQuestions.size}
+                </span>
+              </div>
             </div>
           </div>
         </div>
