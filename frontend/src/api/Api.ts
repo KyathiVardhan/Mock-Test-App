@@ -63,6 +63,8 @@ export const api = {
     return data;
   },
 
+  
+
   register: async (name: string, email: string, password: string): Promise<AuthResponse> => {
     const response = await fetch(`${BASE_URL}/register`, {
       method: 'POST',

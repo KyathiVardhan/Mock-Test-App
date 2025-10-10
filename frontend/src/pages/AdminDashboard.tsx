@@ -1,12 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+
+interface ExamStats {
+    totalExams: number;
+    totalTests: number;
+    totalQuestions: number;
+    subjects: string[];
+}
 
 function AdminDashboard() {
     const { adminLogout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [stats, setStats] = useState<ExamStats>({
+        totalExams: 0,
+        totalTests: 0,
+        totalQuestions: 0,
+        subjects: []
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchStats();
+    }, []);
+
+    const fetchStats = async () => {
+        try {
+            const response = await fetch('/api/exams', {
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    const exams = result.data;
+                    const totalQuestions = exams.reduce((sum: number, exam: any) => sum + exam.totalQuestions, 0);
+                    const subjects = [...new Set(exams.map((exam: any) => exam.subject as string))];
+                    
+                    setStats({
+                        totalExams: exams.length,
+                        totalTests: 0, // This will come from tests API later
+                        totalQuestions,
+                        subjects
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleLogout = async () => {
         try {
@@ -29,10 +75,22 @@ function AdminDashboard() {
             description: 'Overview and statistics'
         },
         {
+            path: '/admin/add-exam',
+            icon: '📚',
+            label: 'Add Exam',
+            description: 'Create exam question banks'
+        },
+        {
             path: '/admin/add-test',
             icon: '➕',
             label: 'Add Test',
             description: 'Create new mock tests'
+        },
+        {
+            path: '/admin/manage-exams',
+            icon: '📖',
+            label: 'Manage Exams',
+            description: 'Edit exam question banks'
         },
         {
             path: '/admin/manage-tests',
@@ -44,7 +102,7 @@ function AdminDashboard() {
             path: '/admin/questions',
             icon: '❓',
             label: 'Question Bank',
-            description: 'Manage questions'
+            description: 'Browse all questions'
         },
         {
             path: '/admin/students',
@@ -66,7 +124,7 @@ function AdminDashboard() {
         }
     ];
 
-    const isActiveRoute = (path: any) => {
+    const isActiveRoute = (path: string) => {
         return location.pathname === path;
     };
 
@@ -157,11 +215,14 @@ function AdminDashboard() {
                             <div className="bg-white rounded-lg shadow p-6">
                                 <div className="flex items-center">
                                     <div className="p-2 bg-blue-100 rounded-lg">
-                                        <span className="text-2xl">📝</span>
+                                        <span className="text-2xl">📚</span>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm text-gray-600">Total Tests</p>
-                                        <p className="text-2xl font-semibold text-gray-800">24</p>
+                                        <p className="text-sm text-gray-600">Total Exams</p>
+                                        <p className="text-xs text-gray-500">Question Banks</p>
+                                        <p className="text-2xl font-semibold text-gray-800">
+                                            {loading ? '...' : stats.totalExams}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -169,11 +230,14 @@ function AdminDashboard() {
                             <div className="bg-white rounded-lg shadow p-6">
                                 <div className="flex items-center">
                                     <div className="p-2 bg-green-100 rounded-lg">
-                                        <span className="text-2xl">👥</span>
+                                        <span className="text-2xl">📝</span>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm text-gray-600">Active Students</p>
-                                        <p className="text-2xl font-semibold text-gray-800">156</p>
+                                        <p className="text-sm text-gray-600">Mock Tests</p>
+                                        <p className="text-xs text-gray-500">Created Tests</p>
+                                        <p className="text-2xl font-semibold text-gray-800">
+                                            {loading ? '...' : stats.totalTests}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -185,7 +249,10 @@ function AdminDashboard() {
                                     </div>
                                     <div className="ml-4">
                                         <p className="text-sm text-gray-600">Questions</p>
-                                        <p className="text-2xl font-semibold text-gray-800">1,247</p>
+                                        <p className="text-xs text-gray-500">Total Available</p>
+                                        <p className="text-2xl font-semibold text-gray-800">
+                                            {loading ? '...' : stats.totalQuestions}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -193,52 +260,183 @@ function AdminDashboard() {
                             <div className="bg-white rounded-lg shadow p-6">
                                 <div className="flex items-center">
                                     <div className="p-2 bg-purple-100 rounded-lg">
-                                        <span className="text-2xl">📊</span>
+                                        <span className="text-2xl">📖</span>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm text-gray-600">Avg Score</p>
-                                        <p className="text-2xl font-semibold text-gray-800">78%</p>
+                                        <p className="text-sm text-gray-600">Subjects</p>
+                                        <p className="text-xs text-gray-500">Law Categories</p>
+                                        <p className="text-2xl font-semibold text-gray-800">
+                                            {loading ? '...' : stats.subjects.length}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Content Creation Section */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            {/* Exam Management */}
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                    <span className="text-2xl mr-2">📚</span>
+                                    Exam Management
+                                </h3>
+                                <p className="text-gray-600 mb-4 text-sm">
+                                    Manage question banks and exam content for your law subjects
+                                </p>
+                                <div className="space-y-3">
+                                    <Link
+                                        to="/admin/add-exam"
+                                        className="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 group"
+                                    >
+                                        <div className="flex items-center">
+                                            <span className="text-xl mr-3">➕</span>
+                                            <div>
+                                                <p className="font-medium text-blue-700">Add New Exam</p>
+                                                <p className="text-sm text-blue-600">Upload CSV question banks</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-blue-400 group-hover:text-blue-600">→</span>
+                                    </Link>
+                                    
+                                    <Link
+                                        to="/admin/manage-exams"
+                                        className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200 group"
+                                    >
+                                        <div className="flex items-center">
+                                            <span className="text-xl mr-3">📖</span>
+                                            <div>
+                                                <p className="font-medium text-gray-700">Manage Exams</p>
+                                                <p className="text-sm text-gray-600">Edit question banks</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-gray-400 group-hover:text-gray-600">→</span>
+                                    </Link>
+                                </div>
+                            </div>
+
+                            {/* Test Management */}
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                    <span className="text-2xl mr-2">📝</span>
+                                    Test Management
+                                </h3>
+                                <p className="text-gray-600 mb-4 text-sm">
+                                    Create and manage mock tests from your exam question banks
+                                </p>
+                                <div className="space-y-3">
+                                    <Link
+                                        to="/admin/add-test"
+                                        className="flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200 group"
+                                    >
+                                        <div className="flex items-center">
+                                            <span className="text-xl mr-3">➕</span>
+                                            <div>
+                                                <p className="font-medium text-green-700">Create Mock Test</p>
+                                                <p className="text-sm text-green-600">Build from question banks</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-green-400 group-hover:text-green-600">→</span>
+                                    </Link>
+                                    
+                                    <Link
+                                        to="/admin/manage-tests"
+                                        className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200 group"
+                                    >
+                                        <div className="flex items-center">
+                                            <span className="text-xl mr-3">📝</span>
+                                            <div>
+                                                <p className="font-medium text-gray-700">Manage Tests</p>
+                                                <p className="text-sm text-gray-600">Edit existing tests</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-gray-400 group-hover:text-gray-600">→</span>
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Quick Actions */}
-                        <div className="bg-white rounded-lg shadow p-6">
+                        <div className="bg-white rounded-lg shadow p-6 mb-8">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <Link
-                                    to="/admin/add-test"
-                                    className="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200"
+                                    to="/admin/questions"
+                                    className="flex items-center p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors duration-200"
                                 >
-                                    <span className="text-2xl mr-3">➕</span>
+                                    <span className="text-2xl mr-3">❓</span>
                                     <div>
-                                        <p className="font-medium text-blue-700">Add New Test</p>
-                                        <p className="text-sm text-blue-600">Create a new mock test</p>
+                                        <p className="font-medium text-yellow-700">Question Bank</p>
+                                        <p className="text-sm text-yellow-600">Browse all questions</p>
                                     </div>
                                 </Link>
                                 
                                 <Link
-                                    to="/admin/questions"
-                                    className="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200"
+                                    to="/admin/students"
+                                    className="flex items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors duration-200"
                                 >
-                                    <span className="text-2xl mr-3">❓</span>
+                                    <span className="text-2xl mr-3">👥</span>
                                     <div>
-                                        <p className="font-medium text-green-700">Question Bank</p>
-                                        <p className="text-sm text-green-600">Manage questions</p>
+                                        <p className="font-medium text-purple-700">Students</p>
+                                        <p className="text-sm text-purple-600">View student data</p>
                                     </div>
                                 </Link>
                                 
                                 <Link
                                     to="/admin/analytics"
-                                    className="flex items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors duration-200"
+                                    className="flex items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors duration-200"
                                 >
                                     <span className="text-2xl mr-3">📈</span>
                                     <div>
-                                        <p className="font-medium text-purple-700">View Analytics</p>
-                                        <p className="text-sm text-purple-600">Student performance</p>
+                                        <p className="font-medium text-indigo-700">Analytics</p>
+                                        <p className="text-sm text-indigo-600">Performance insights</p>
                                     </div>
                                 </Link>
+                            </div>
+                        </div>
+
+                        {/* Available Subjects */}
+                        {stats.subjects.length > 0 && (
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4">Available Law Subjects</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {stats.subjects.map((subject, index) => (
+                                        <span
+                                            key={index}
+                                            className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                                        >
+                                            {subject.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Help Section */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mt-8">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-2">Need Help?</h3>
+                            <p className="text-gray-600 mb-4">
+                                Understand the difference between Exams and Tests in your law platform:
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <div className="bg-white p-4 rounded-lg">
+                                    <h4 className="font-medium text-blue-700 mb-2">📚 Exams (Question Banks)</h4>
+                                    <ul className="text-gray-600 space-y-1">
+                                        <li>• Upload CSV files with questions</li>
+                                        <li>• Organize by subject and difficulty</li>
+                                        <li>• Serve as source material</li>
+                                        <li>• Reusable across multiple tests</li>
+                                    </ul>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg">
+                                    <h4 className="font-medium text-green-700 mb-2">📝 Tests (Mock Tests)</h4>
+                                    <ul className="text-gray-600 space-y-1">
+                                        <li>• Create from exam question banks</li>
+                                        <li>• Set specific configurations</li>
+                                        <li>• Define time limits and scoring</li>
+                                        <li>• Students take these assessments</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>

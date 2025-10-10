@@ -7,8 +7,7 @@ import { connectDB } from "./db/db";
 import { loginUser } from "./controller/userLogin";
 import testRoutes from "./routes/testRoutes";
 import adminRoutes from '../users/routes/adminRoutes'
-import { registerTest } from "./controller/testReservation";
-import { validateTestRegistration } from "./middleware/testValidation";
+import examRoutes from '../users/routes/examRoutes'
 
 const app = express();
 
@@ -25,7 +24,7 @@ app.use("/api/register", registerUser);
 app.use("/api/login", loginUser);
 app.use("/api/tests", testRoutes);
 app.use("/api/admin/", adminRoutes);
-
+app.use("/api/exams/", examRoutes)
 
 // Logout endpoint
 app.post("/api/logout", (req, res) => {
