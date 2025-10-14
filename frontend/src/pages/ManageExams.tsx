@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router-dom';
 interface Exam {
     _id: string;
     examName: string;
-    subjects: string[];
+    practiceAreas: string[]; // Changed from subjects to practiceAreas
     totalQuestions: number;
     breakdown: {
         basic: number;
         intermediate: number;
         advanced: number;
     };
-    subjectDetails: {
-        subject: string;
+    practiceAreaDetails: { // Changed from subjectDetails to practiceAreaDetails
+        practiceArea: string; // Changed from subject to practiceArea
         totalQuestions: number;
         breakdown: {
             basic: number;
@@ -36,14 +36,18 @@ interface AddQuestionsResponse {
     data?: {
         examId: string;
         examName: string;
-        examSubject: string;
-        csvSubjects: string[];
-        questionsAdded: {
-            basic: number;
-            intermediate: number;
-            advanced: number;
-        };
+        csvPracticeAreas: string[]; // Changed from csvSubjects to csvPracticeAreas
+        questionsAdded: number;
         totalQuestions: number;
+        practiceAreas: { // Changed from subjects to practiceAreas
+            practiceArea: string;
+            totalQuestions: number;
+            breakdown: {
+                basic: number;
+                intermediate: number;
+                advanced: number;
+            };
+        }[];
     };
 }
 
@@ -161,13 +165,13 @@ function ManageExams() {
             console.log('Response result:', result);
 
             if (result.success) {
-                const subjectInfo = result.data?.csvSubjects && result.data.csvSubjects.length > 0 
-                    ? ` Questions from subjects: ${result.data.csvSubjects.join(', ')}.`
+                const practiceAreaInfo = result.data?.csvPracticeAreas && result.data.csvPracticeAreas.length > 0 
+                    ? ` Questions from practice areas: ${result.data.csvPracticeAreas.join(', ')}.`
                     : '';
                 
                 setMessage({ 
                     type: 'success', 
-                    content: `Successfully added questions to "${result.data?.examName}"! Added: ${result.data?.questionsAdded.basic} basic, ${result.data?.questionsAdded.intermediate} intermediate, ${result.data?.questionsAdded.advanced} advanced questions.${subjectInfo}` 
+                    content: `Successfully added ${result.data?.questionsAdded || 0} questions to "${result.data?.examName}"!${practiceAreaInfo}` 
                 });
                 
                 // Reset form
@@ -238,6 +242,19 @@ function ManageExams() {
                     )}
                 </div>
 
+                {/* Global Message Display */}
+                {message.content && !showAddQuestions && (
+                    <div
+                        className={`mb-6 p-4 rounded-lg ${
+                            message.type === 'success'
+                                ? 'bg-green-50 border border-green-200 text-green-700'
+                                : 'bg-red-50 border border-red-200 text-red-700'
+                        }`}
+                    >
+                        {message.content}
+                    </div>
+                )}
+
                 {/* Exams Grid */}
                 {exams.length === 0 ? (
                     <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -261,16 +278,16 @@ function ManageExams() {
                                             {exam.examName}
                                         </h3>
                                         <div className="text-sm text-gray-600 mb-2">
-                                            <p className="font-medium mb-1">Subjects:</p>
+                                            <p className="font-medium mb-1">Practice Areas:</p>
                                             <div className="flex flex-wrap gap-1">
-                                                {exam.subjects.map((subject, index) => (
+                                                {exam.practiceAreas?.map((area, index) => (
                                                     <span
                                                         key={index}
                                                         className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
                                                     >
-                                                        {subject.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                                                        {area.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                                                     </span>
-                                                ))}
+                                                )) || <span className="text-gray-500 text-xs">No practice areas</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -298,18 +315,18 @@ function ManageExams() {
                                         </div>
                                     </div>
                                     
-                                    {/* Subject Breakdown */}
-                                    {exam.subjectDetails.length > 1 && (
+                                    {/* Practice Area Breakdown */}
+                                    {exam.practiceAreaDetails && exam.practiceAreaDetails.length > 1 && (
                                         <div className="border-t pt-2">
-                                            <p className="text-xs font-medium text-gray-600 mb-1">By Subject:</p>
+                                            <p className="text-xs font-medium text-gray-600 mb-1">By Practice Area:</p>
                                             <div className="space-y-1">
-                                                {exam.subjectDetails.map((subject, index) => (
+                                                {exam.practiceAreaDetails.map((area, index) => (
                                                     <div key={index} className="flex justify-between items-center text-xs">
                                                         <span className="text-gray-600">
-                                                            {subject.subject.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                                                            {area.practiceArea.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                                                         </span>
                                                         <span className="text-gray-800 font-medium">
-                                                            {subject.totalQuestions} questions
+                                                            {area.totalQuestions} questions
                                                         </span>
                                                     </div>
                                                 ))}
@@ -362,7 +379,7 @@ function ManageExams() {
                                             Adding questions to: <span className="font-medium">{selectedExam.examName}</span>
                                         </p>
                                         <p className="text-xs text-blue-600 mt-1">
-                                            ✓ You can add questions from any subject to this exam
+                                            ✓ You can add questions from any practice area to this exam
                                         </p>
                                     </div>
                                     <button
@@ -424,13 +441,13 @@ function ManageExams() {
                                     <h3 className="text-sm font-medium text-blue-900 mb-2">CSV Format Requirements</h3>
                                     <p className="text-blue-800 text-sm mb-2">Your CSV file should have the following columns:</p>
                                     <div className="bg-white rounded p-2 text-xs font-mono text-blue-700">
-                                        question,option1,option2,option3,option4,correctAnswer,explanation,difficulty,subject
+                                        question,option1,option2,option3,option4,correctAnswer,explanation,difficulty,practiceArea
                                     </div>
                                     <div className="mt-2 space-y-1 text-xs text-blue-700">
                                         <p>• <strong>difficulty:</strong> basic, intermediate, or advanced</p>
                                         <p>• <strong>correctAnswer:</strong> Should match one of the options exactly</p>
-                                        <p>• <strong>subject:</strong> Can be any subject (will be added to this exam)</p>
-                                        <p>• <strong>Note:</strong> Questions with different subjects will be added to this exam</p>
+                                        <p>• <strong>practiceArea:</strong> Can be any law practice area (will be added to this exam)</p>
+                                        <p>• <strong>Note:</strong> Questions with different practice areas will be organized under this exam</p>
                                     </div>
                                 </div>
 

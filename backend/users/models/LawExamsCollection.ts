@@ -6,11 +6,11 @@ export interface IQuestion {
     options: string[];
     correctAnswer: string | number;
     explanation: string;
-    subject: string; // Add subject to each question
+    practiceArea: string; // Add subject to each question
 }
 
 export interface ISubjectData {
-    subject: string;
+    practiceArea: string;
     basicQuestions: IQuestion[];
     intermediateQuestions: IQuestion[];
     advancedQuestions: IQuestion[];
@@ -19,7 +19,7 @@ export interface ISubjectData {
 export interface IExam extends Document {
     _id: string;
     examName: string;
-    subjects: ISubjectData[]; // Array of subjects with their questions
+    practiceArea: ISubjectData[]; // Array of subjects with their questions
     createdAt: Date;
     updatedAt: Date;
 }
@@ -56,7 +56,7 @@ const QuestionSchema = new Schema<IQuestion>({
         required: true,
         trim: true
     },
-    subject: {
+    practiceArea: {
         type: String,
         required: true,
         trim: true,
@@ -66,7 +66,7 @@ const QuestionSchema = new Schema<IQuestion>({
 
 // Subject Data Schema (embedded)
 const SubjectDataSchema = new Schema<ISubjectData>({
-    subject: {
+    practiceArea: {
         type: String,
         required: true,
         trim: true,
@@ -97,7 +97,7 @@ const ExamSchema = new Schema<IExam>({
         trim: true,
         unique: true
     },
-    subjects: {
+    practiceArea: {
         type: [SubjectDataSchema],
         required: true,
         default: []
