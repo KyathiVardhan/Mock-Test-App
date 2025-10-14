@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -35,10 +35,16 @@ function AdminDashboard() {
             if (response.ok) {
                 const result = await response.json();
                 if (result.success) {
-                    const exams = result.data;
-                    const totalQuestions = exams.reduce((sum: number, exam: any) => sum + exam.totalQuestions, 0);
-                    const subjects = [...new Set(exams.map((exam: any) => exam.subject as string))];
-                    
+                    // Ensure result.data is an array before operating on it
+                    const exams = Array.isArray(result.data) ? (result.data as any[]) : [];
+
+                    const totalQuestions = exams.reduce((sum: number, exam: any) => {
+                        const q = Number(exam?.totalQuestions) || 0;
+                        return sum + q;
+                    }, 0);
+
+                    const subjects = Array.from(new Set(exams.map((exam: any) => String(exam?.subject || '')).filter(Boolean)));
+
                     setStats({
                         totalExams: exams.length,
                         totalTests: 0, // This will come from tests API later
