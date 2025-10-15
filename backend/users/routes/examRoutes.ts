@@ -12,7 +12,7 @@ router.post('/add-new-subject', isAdminAuth, upload.single('csvFile'), addNewPra
 router.post('/:examId/add-questions', isAdminAuth, upload.single('csvFile'), addQuestionsToExam);
 router.post('/create', isAdminAuth, upload.single('csvFile'), addExamFromCSV);
 router.post('/get-exam',authenticateToken, getExamSyllabus);
-router.get('/test', getAllExams); // Test route without auth
+router.get('/test', authenticateToken, getAllExams); // Test route without auth
 router.get('/', isAdminAuth, getAllExams);
 
 export default router;

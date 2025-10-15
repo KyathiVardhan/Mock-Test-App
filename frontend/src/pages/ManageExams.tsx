@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BASE_URL } from '../api/Api';
 
 interface Exam {
     _id: string;
@@ -57,6 +58,7 @@ function ManageExams() {
     const [loading, setLoading] = useState(true);
     const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
     const [showAddQuestions, setShowAddQuestions] = useState(false);
+    const [showPracticeAreaBreakdown, setPracticeAreaBreakdown] = useState<'view breakdown' | 'hide breakdown'>('view breakdown');
     const [csvFile, setCsvFile] = useState<File | null>(null);
     const [uploadLoading, setUploadLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', content: '' });
@@ -70,14 +72,19 @@ function ManageExams() {
         try {
             console.log('=== Frontend: Fetching exams ===');
             console.log('API URL: /api/exams');
-            
-            const response = await fetch('/api/exams', {
-                credentials: 'include'
+
+            const response = await fetch(`${BASE_URL}/exams`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                }
             });
-            
+
             console.log('Response status:', response.status);
             console.log('Response ok:', response.ok);
-            
+
             if (response.ok) {
                 const result: ExamResponse = await response.json();
                 console.log('Response result:', result);
@@ -100,6 +107,10 @@ function ManageExams() {
             setLoading(false);
         }
     };
+
+    const practiceAreaBreakdownFun = () => {
+        setPracticeAreaBreakdown((prev) => prev === 'hide breakdown' ? 'view breakdown' : 'hide breakdown');
+    }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -125,7 +136,7 @@ function ManageExams() {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        
+
         const file = e.dataTransfer.files?.[0];
         if (file && file.type === 'text/csv') {
             setCsvFile(file);
@@ -165,20 +176,20 @@ function ManageExams() {
             console.log('Response result:', result);
 
             if (result.success) {
-                const practiceAreaInfo = result.data?.csvPracticeAreas && result.data.csvPracticeAreas.length > 0 
+                const practiceAreaInfo = result.data?.csvPracticeAreas && result.data.csvPracticeAreas.length > 0
                     ? ` Questions from practice areas: ${result.data.csvPracticeAreas.join(', ')}.`
                     : '';
-                
-                setMessage({ 
-                    type: 'success', 
-                    content: `Successfully added ${result.data?.questionsAdded || 0} questions to "${result.data?.examName}"!${practiceAreaInfo}` 
+
+                setMessage({
+                    type: 'success',
+                    content: `Successfully added ${result.data?.questionsAdded || 0} questions to "${result.data?.examName}"!${practiceAreaInfo}`
                 });
-                
+
                 // Reset form
                 setCsvFile(null);
                 setSelectedExam(null);
                 setShowAddQuestions(false);
-                
+
                 // Refresh exams list
                 await fetchExams();
             } else {
@@ -245,11 +256,10 @@ function ManageExams() {
                 {/* Global Message Display */}
                 {message.content && !showAddQuestions && (
                     <div
-                        className={`mb-6 p-4 rounded-lg ${
-                            message.type === 'success'
-                                ? 'bg-green-50 border border-green-200 text-green-700'
-                                : 'bg-red-50 border border-red-200 text-red-700'
-                        }`}
+                        className={`mb-6 p-4 rounded-lg ${message.type === 'success'
+                            ? 'bg-green-50 border border-green-200 text-green-700'
+                            : 'bg-red-50 border border-red-200 text-red-700'
+                            }`}
                     >
                         {message.content}
                     </div>
@@ -314,9 +324,15 @@ function ManageExams() {
                                             <div className="text-xs text-red-600">Advanced</div>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Practice Area Breakdown */}
-                                    {exam.practiceAreaDetails && exam.practiceAreaDetails.length > 1 && (
+                                    <div className='flex flex-row  justify-end'>
+                                        <button
+                                            className='flex-1 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center'
+                                            onClick={practiceAreaBreakdownFun}
+                                        >{showPracticeAreaBreakdown}</button>
+                                    </div>
+                                    {showPracticeAreaBreakdown === 'hide breakdown' && exam.practiceAreaDetails && exam.practiceAreaDetails.length > 1 && (
                                         <div className="border-t pt-2">
                                             <p className="text-xs font-medium text-gray-600 mb-1">By Practice Area:</p>
                                             <div className="space-y-1">
@@ -333,6 +349,8 @@ function ManageExams() {
                                             </div>
                                         </div>
                                     )}
+
+
                                 </div>
 
                                 {/* Actions */}
@@ -396,11 +414,10 @@ function ManageExams() {
                                         CSV File *
                                     </label>
                                     <div
-                                        className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                                            dragActive
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-300 hover:border-gray-400'
-                                        }`}
+                                        className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
+                                            ? 'border-blue-500 bg-blue-50'
+                                            : 'border-gray-300 hover:border-gray-400'
+                                            }`}
                                         onDragEnter={handleDrag}
                                         onDragLeave={handleDrag}
                                         onDragOver={handleDrag}
@@ -454,11 +471,10 @@ function ManageExams() {
                                 {/* Message Display */}
                                 {message.content && (
                                     <div
-                                        className={`p-4 rounded-lg mb-6 ${
-                                            message.type === 'success'
-                                                ? 'bg-green-50 border border-green-200 text-green-700'
-                                                : 'bg-red-50 border border-red-200 text-red-700'
-                                        }`}
+                                        className={`p-4 rounded-lg mb-6 ${message.type === 'success'
+                                            ? 'bg-green-50 border border-green-200 text-green-700'
+                                            : 'bg-red-50 border border-red-200 text-red-700'
+                                            }`}
                                     >
                                         {message.content}
                                     </div>

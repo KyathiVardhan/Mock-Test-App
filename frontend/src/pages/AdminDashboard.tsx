@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { BASE_URL } from '../api/Api'
 
 interface ExamStats {
     totalExams: number;
@@ -28,8 +29,13 @@ function AdminDashboard() {
 
     const fetchStats = async () => {
         try {
-            const response = await fetch('/api/exams', {
-                credentials: 'include'
+            const response = await fetch(`${BASE_URL}/exams`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                }
             });
             
             if (response.ok) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BASE_URL } from '../api/Api';
 
 interface Exam {
     _id: string;
@@ -62,8 +63,13 @@ function AddQuestionsToSubject() {
 
     const fetchExams = async () => {
         try {
-            const response = await fetch('/api/exams', {
-                credentials: 'include'
+            const response = await fetch(`${BASE_URL}/exams`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                }
             });
             
             if (response.ok) {

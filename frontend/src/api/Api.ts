@@ -1,4 +1,17 @@
-const BASE_URL = "http://localhost:5000/api";
+export const  BASE_URL = "http://localhost:5000/api";
+
+const getAuthHeaders = (isAdmin = false) => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  const token = isAdmin ? localStorage.getItem('adminToken') : localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+};
 
 export interface AuthResponse {
   success: boolean;
