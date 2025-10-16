@@ -215,12 +215,12 @@ function AddExam() {
                             <h3 className="text-lg font-medium text-blue-900 mb-3">CSV Format Requirements</h3>
                             <p className="text-blue-800 mb-3">Your CSV file should have the following columns:</p>
                             <div className="bg-white rounded p-4 text-sm font-mono">
-                                question,option1,option2,option3,option4,correctAnswer,explanation,difficulty,subject
+                                question,option1,option2,option3,option4,correctAnswer,explanation,difficulty,practiceArea
                             </div>
                             <div className="mt-4 space-y-2 text-sm text-blue-700">
                                 <p>• <strong>difficulty:</strong> basic, intermediate, or advanced</p>
                                 <p>• <strong>correctAnswer:</strong> Should match one of the options exactly</p>
-                                <p>• <strong>subject:</strong> Will be converted to uppercase (e.g., constitutional_law)</p>
+                                <p>• <strong>practiceArea:</strong> Will be converted to uppercase (e.g., constitutional_law)</p>
                                 <p>• All fields are required for each question</p>
                             </div>
                         </div>

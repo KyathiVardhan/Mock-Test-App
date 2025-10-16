@@ -1,34 +1,42 @@
 import { Request, Response } from 'express';
 import { Exam } from '../models/LawExamsCollection';
 
-// ✅ Configuration - Define questions per practice area based on syllabus
+// ✅ Configuration - Updated to match EXACT database names
 const SYLLABUS_CONFIG: Record<string, number> = {
   'constitutional law': 10,
-  'indian penal code-ipc': 8,
-  'cr. p. c.-criminal procedure code': 10,
-  'c. p. c.-code of civil procedure': 10,
+  'i. p. c. (indian penal code)': 8,
+  'cr. p. c. (criminal procedure code)': 10,
+  'c. p. c. (code of civil procedure)': 10,
+  'evidence act': 8,
   'alternative dispute redressal including arbitration act': 4,
   'family law': 8,
   'administration law': 3,
   'professional ethics & cases of professional misconduct under bar council of india rules': 4,
   'company law': 2,
   'environmental law': 2,
+  'cyber law': 2,
   'labour & industrial law': 4,
   'law of tort': 5,
   'law related to taxation': 2,
-  'law of contract': 8,
-  'specific relief': 2,
+  'law of contract': 9, //added 1 extra for completing 100
+  // 'specific relief': 2,
+  'specific relief act': 3,//added 1 extra for completing 100
   'property laws': 2,
   'land acquisition act': 2,
   'intellectual property laws': 2,
 };
 
-// Helper function to normalize string for comparison
+// Helper function to normalize string for comparison - ENHANCED
 const normalizeString = (str: string): string => {
   return str
     .toLowerCase()
     .replace(/\n/g, ' ') // Replace newlines with spaces
     .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/[()]/g, '') // Remove parentheses
+    .replace(/\./g, '') // Remove periods
+    .replace(/&/g, 'and') // Replace & with 'and'
+    .replace(/-/g, ' ') // Replace hyphens with spaces
+    .replace(/\s+/g, ' ') // Collapse multiple spaces again
     .trim(); // Remove leading/trailing spaces
 };
 
@@ -54,8 +62,8 @@ const getRandomQuestions = (
     ...(basicQuestions || []).map(q => ({ 
       difficulty: 'basic',
       question: q.question || '',
-      options: q.options || [], // Keep as array
-      option1: q.options?.[0] || '', // Extract individual options
+      options: q.options || [],
+      option1: q.options?.[0] || '',
       option2: q.options?.[1] || '',
       option3: q.options?.[2] || '',
       option4: q.options?.[3] || '',
@@ -129,16 +137,39 @@ export const getExamSyllabus = async (req: Request, res: Response) => {
         const areaName = area.practiceArea;
         const normalizedAreaName = normalizeString(areaName);
         
-        // Get the configured question count for this area using normalized name
-        const configuredCount = SYLLABUS_CONFIG[normalizedAreaName] || 0;
+        // Try to find a match in SYLLABUS_CONFIG
+        let configuredCount = 0;
         
-        // Skip areas with no configured count
+        // First try exact match
+        if (SYLLABUS_CONFIG[normalizedAreaName] !== undefined) {
+          configuredCount = SYLLABUS_CONFIG[normalizedAreaName];
+        } else {
+          // Try to find a partial match
+          const configKeys = Object.keys(SYLLABUS_CONFIG);
+          for (const key of configKeys) {
+            const normalizedKey = normalizeString(key);
+            if (normalizedKey === normalizedAreaName) {
+              configuredCount = SYLLABUS_CONFIG[key];
+              break;
+            }
+          }
+        }
+        
+        // Debug: Log what we're matching
+        console.log(`Area: "${areaName}" -> Normalized: "${normalizedAreaName}" -> Count: ${configuredCount}`);
+        
+        // Skip areas with no configured count (not in syllabus)
         if (configuredCount === 0) {
           return null;
         }
 
         // Check if area has any questions
-        if (!area.basicQuestions && !area.intermediateQuestions && !area.advancedQuestions) {
+        const totalAvailable =
+          (area.basicQuestions?.length || 0) +
+          (area.intermediateQuestions?.length || 0) +
+          (area.advancedQuestions?.length || 0);
+
+        if (totalAvailable === 0) {
           return {
             serialNo: index + 1,
             areaName: areaName,
@@ -157,11 +188,6 @@ export const getExamSyllabus = async (req: Request, res: Response) => {
           area.advancedQuestions,
           configuredCount
         );
-
-        const totalAvailable =
-          (area.basicQuestions?.length || 0) +
-          (area.intermediateQuestions?.length || 0) +
-          (area.advancedQuestions?.length || 0);
 
         return {
           serialNo: index + 1,
@@ -193,10 +219,9 @@ export const getExamSyllabus = async (req: Request, res: Response) => {
       0
     );
 
-    const totalRequiredQuestions = Object.values(SYLLABUS_CONFIG).reduce(
-      (sum, count) => sum + count,
-      0
-    );
+    const totalRequiredQuestions = Object.values(SYLLABUS_CONFIG)
+      .filter(count => count > 0)
+      .reduce((sum, count) => sum + count, 0);
 
     const syllabus = {
       examId: exam._id,
@@ -227,5 +252,3 @@ export const getExamSyllabus = async (req: Request, res: Response) => {
     });
   }
 };
-
-

@@ -99,7 +99,7 @@ export default function Dashboard() {
       }
 
       const apiResponse: TestApiResponse = await response.json();
-      
+
       if (!apiResponse.success) {
         throw new Error(apiResponse.message || 'Failed to fetch test categories');
       }
@@ -131,7 +131,7 @@ export default function Dashboard() {
       }
 
       const result: ExamApiResponse = await response.json();
-      
+
       if (result.success) {
         setExams(result.data);
       } else {
@@ -161,7 +161,7 @@ export default function Dashboard() {
 
   const getDominantDifficulty = (breakdown: TestCategory['breakdown']) => {
     const { BASIC, INTERMEDIATE, ADVANCED } = breakdown;
-    
+
     if (ADVANCED > BASIC && ADVANCED > INTERMEDIATE) return 'Advanced';
     if (INTERMEDIATE > BASIC) return 'Intermediate';
     return 'Beginner';
@@ -169,7 +169,7 @@ export default function Dashboard() {
 
   const getCategoryColor = (breakdown: TestCategory['breakdown']) => {
     const difficulty = getDominantDifficulty(breakdown);
-    
+
     const difficultyColors: { [key: string]: string } = {
       'Beginner': 'bg-green-500',
       'Intermediate': 'bg-amber-500',
@@ -324,11 +324,10 @@ export default function Dashboard() {
               <nav className="flex space-x-8">
                 <button
                   onClick={() => setActiveTab('subjects')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'subjects'
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'subjects'
                       ? 'border-amber-500 text-amber-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center">
                     <BookOpen className="h-5 w-5 mr-2" />
@@ -337,11 +336,10 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => setActiveTab('exams')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'exams'
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'exams'
                       ? 'border-amber-500 text-amber-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center">
                     <FileText className="h-5 w-5 mr-2" />
@@ -410,7 +408,7 @@ export default function Dashboard() {
                       <div className="p-6">
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">{category.subject}</h3>
                         <p className="text-gray-600 mb-4 text-sm">{getCategoryDescription(category.subject)}</p>
-                        
+
                         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                           <span>{category.totalQuestions} questions</span>
                           <span>{getDominantDifficulty(category.breakdown)}</span>
@@ -496,7 +494,7 @@ export default function Dashboard() {
                             {expandedExam === exam._id ? 'Hide Details' : 'View Details'}
                           </button>
                         </div>
-                        
+
 
                         <div className="mt-4 flex flex-wrap gap-4">
                           <div className="bg-green-50 px-4 py-2 rounded-md">
@@ -517,17 +515,27 @@ export default function Dashboard() {
                           <span>Created: {formatDate(exam.createdAt)}</span>
                           <span>Updated: {formatDate(exam.updatedAt)}</span>
                         </div>
-                        <div className='flex flex-row justify-center '>
-                          <button className="w-96 bg-amber-50 hover:bg-amber-100 text-amber-900 font-medium py-3 px-4 m-5 rounded-lg transition-colors flex items-center justify-center border border-amber-200">
-                            Start Test
+                        {/* Start Test button - outside the border-b container */}
+                        <div className='flex flex-row justify-center p-6'>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Navigating with exam:', exam);
+                              navigate("/ExamQuestions", { state: { exam: exam } });
+                            }}
+                            className="w-96 bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center border-0 shadow-sm"
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Start Exam
                           </button>
                         </div>
                       </div>
-                      
+
 
                       {expandedExam === exam._id && (
-                        
-                        <ShowDetails exam={exam}/>
+
+                        <ShowDetails exam={exam} />
                       )}
                     </div>
                   ))}
