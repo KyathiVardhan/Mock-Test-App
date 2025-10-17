@@ -21,6 +21,7 @@ import AddQuestionsToSubject from './pages/AddQuestionsToSubject';
 import AddNewSubjectToExam from './pages/AddNewSubjectToExam';
 // import MockExam from './pages/MockExam';
 import ExamQuestions from './pages/ExamQuestions';
+import ExamResults from './pages/ExamResults';
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -108,7 +109,7 @@ function App() {
             
             {/* <Route path="/MockExam" element={<MockExam />} /> */}
             <Route path="/ExamQuestions" element={<ExamQuestions />} />
-            
+            <Route path="/exam-results" element={<ExamResults />} />
             <Route path="/register" element={
               <PublicRoute>
                 <RegisterPage />
@@ -125,6 +126,8 @@ function App() {
                 <TestResults />
               </ProtectedRoute>
             } />
+
+            
 
             {/* New routes for difficulty selection and tests */}
             <Route

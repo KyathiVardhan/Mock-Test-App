@@ -11,21 +11,18 @@ interface QuestionOption {
 
 interface Question {
   questionNo: number;
+  questionHash: string; // ← Must have this from backend
   question: string;
   options: QuestionOption;
-  correctAnswer: string;
   difficulty: string;
-  explanation: string;
-  practiceArea?: string; // To track which practice area it's from
+  practiceArea: string;
+  // ❌ NO correctAnswer or explanation here!
 }
 
 interface PracticeArea {
   serialNo: number;
   areaName: string;
-  requiredQuestions: number;
-  totalAvailableQuestions: number;
   selectedQuestionCount: number;
-  status: string;
   questions: Question[];
 }
 
@@ -41,6 +38,8 @@ interface ExamData {
     totalMarks: number;
     passingMarks: number;
   };
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Breakdown {
@@ -60,7 +59,7 @@ interface Exam {
   updatedAt: string;
 }
 
-export default function ExamQuestions() {
+export default function ExamTest() {
   const location = useLocation();
   const navigate = useNavigate();
   const exam = location.state?.exam as Exam | undefined;
@@ -125,7 +124,7 @@ export default function ExamQuestions() {
     return shuffled;
   };
 
-  // Fetch exam questions
+  // Fetch exam questions WITHOUT answers
   useEffect(() => {
     const fetchExamQuestions = async () => {
       if (!exam) return;
@@ -155,7 +154,7 @@ export default function ExamQuestions() {
 
         setExamData(result.data);
 
-        // Flatten all questions from all practice areas and add practice area info
+        // Flatten all questions from all practice areas
         const allQuestions: Question[] = [];
         result.data.practiceAreas.forEach((area: PracticeArea) => {
           area.questions.forEach((question: Question) => {
@@ -205,10 +204,10 @@ export default function ExamQuestions() {
     setTestStartTime(new Date().toISOString());
   };
 
-  const handleAnswerSelect = (optionKey: string) => {
+  const handleAnswerSelect = (optionValue: string) => {
     setSelectedAnswers({
       ...selectedAnswers,
-      [currentQuestion]: optionKey,
+      [currentQuestion]: optionValue,
     });
   };
 
@@ -250,6 +249,7 @@ export default function ExamQuestions() {
     setShowNavigationWarning(false);
   };
 
+  // ✅ CORRECT - Submit to backend for validation
   const handleConfirmSubmit = async () => {
     setShowConfirmModal(false);
     setShowNavigationWarning(false);
@@ -261,44 +261,46 @@ export default function ExamQuestions() {
     try {
       const endTime = new Date().toISOString();
 
-      // Calculate score
-      let correctCount = 0;
-      const results = flattenedQuestions.map((question, index) => {
-        const userAnswer = selectedAnswers[index];
-        const isCorrect = userAnswer === question.correctAnswer;
-        if (isCorrect) correctCount++;
+      // Prepare user answers with questionHash
+      const userAnswers = flattenedQuestions.map((question, index) => ({
+        questionHash: question.questionHash,
+        userAnswer: selectedAnswers[index] || null,
+      }));
 
-        return {
-          questionNo: index + 1,
-          question: question.question,
-          options: question.options,
-          userAnswer: userAnswer || 'Not Answered',
-          correctAnswer: question.correctAnswer,
-          isCorrect,
-          difficulty: question.difficulty,
-          explanation: question.explanation,
-          practiceArea: question.practiceArea,
-        };
-      });
+      const submissionData = {
+        examName: examData?.examName,
+        userAnswers,
+        startTime: testStartTime,
+        endTime: endTime,
+      };
 
-      const score = (correctCount / flattenedQuestions.length) * 100;
+      console.log('Submitting exam:', submissionData);
 
-      // Navigate to results
-      navigate(`/exam-results/${examData?.examId}`, {
-        state: {
-          examName: examData?.examName,
-          totalQuestions: flattenedQuestions.length,
-          correctAnswers: correctCount,
-          incorrectAnswers: flattenedQuestions.length - correctCount,
-          score: score.toFixed(2),
-          results: results,
-          startTime: testStartTime,
-          endTime: endTime,
-          totalMarks: examData?.examDetails.totalMarks,
-          passingMarks: examData?.examDetails.passingMarks,
+      // ✅ Send to backend for validation
+      const response = await fetch('http://localhost:5000/api/exams/submit-exam', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        replace: true,
+        credentials: 'include',
+        body: JSON.stringify(submissionData),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // ✅ Navigate with backend-validated results
+        navigate(`/exam-results/${examData?.examId}`, {
+          state: result.data, // ← Backend calculated everything
+          replace: true,
+        });
+      } else {
+        throw new Error(result.message || 'Failed to submit exam');
+      }
 
     } catch (error: any) {
       console.error('Error submitting exam:', error);
@@ -326,6 +328,10 @@ export default function ExamQuestions() {
 
   const answeredCount = Object.keys(selectedAnswers).length;
   const unansweredCount = flattenedQuestions.length - answeredCount;
+
+  // ... Rest of your UI code (loading, error, pre-test, test interface remains the same)
+  // Just make sure you're NOT showing correctAnswer anywhere!
+
 
   // Loading state
   if (loading) {

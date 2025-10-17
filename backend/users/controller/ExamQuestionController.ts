@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { Exam } from '../models/LawExamsCollection';
+import crypto from 'crypto';
+import mongoose from 'mongoose';
 
-// ✅ Configuration - Updated to match EXACT database names
+// ✅ Configuration
 const SYLLABUS_CONFIG: Record<string, number> = {
   'constitutional law': 10,
   'i. p. c. (indian penal code)': 8,
@@ -18,29 +20,26 @@ const SYLLABUS_CONFIG: Record<string, number> = {
   'labour & industrial law': 4,
   'law of tort': 5,
   'law related to taxation': 2,
-  'law of contract': 9, //added 1 extra for completing 100
-  // 'specific relief': 2,
-  'specific relief act': 3,//added 1 extra for completing 100
+  'law of contract': 9,
+  'specific relief act': 3,
   'property laws': 2,
   'land acquisition act': 2,
   'intellectual property laws': 2,
 };
 
-// Helper function to normalize string for comparison - ENHANCED
 const normalizeString = (str: string): string => {
   return str
     .toLowerCase()
-    .replace(/\n/g, ' ') // Replace newlines with spaces
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .replace(/[()]/g, '') // Remove parentheses
-    .replace(/\./g, '') // Remove periods
-    .replace(/&/g, 'and') // Replace & with 'and'
-    .replace(/-/g, ' ') // Replace hyphens with spaces
-    .replace(/\s+/g, ' ') // Collapse multiple spaces again
-    .trim(); // Remove leading/trailing spaces
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[()]/g, '')
+    .replace(/\./g, '')
+    .replace(/&/g, 'and')
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
-// Helper function to shuffle array using Fisher-Yates algorithm
 const shuffleArray = <T>(array: T[]): T[] => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -50,62 +49,86 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled;
 };
 
-// Helper function to get random questions from an area
-const getRandomQuestions = (
+// Generate unique hash for question identification (secure)
+// Uses question content + position as unique identifier
+const generateQuestionHash = (
+  examId: string,
+  practiceArea: string,
+  difficulty: string,
+  questionIndex: number,
+  questionText: string
+): string => {
+  const uniqueString = `${examId}-${practiceArea}-${difficulty}-${questionIndex}-${questionText.substring(0, 50)}`;
+  return crypto.createHash('sha256')
+    .update(`${uniqueString}-${process.env.SECRET_KEY || 'default-secret'}`)
+    .digest('hex');
+};
+
+const getIdAsString = (id: any): string => {
+  if (!id) return '';
+  if (typeof id === 'string') return id;
+  if (id instanceof mongoose.Types.ObjectId) return id.toString();
+  if (id._id) return getIdAsString(id._id);
+  return String(id);
+};
+
+// Helper function to get random questions WITHOUT answers/explanations
+const getRandomQuestionsSecure = (
   basicQuestions: any[] = [],
   intermediateQuestions: any[] = [],
   advancedQuestions: any[] = [],
-  count: number
+  count: number,
+  examId: string,
+  practiceArea: string
 ) => {
-  // Combine all questions from different difficulty levels
   const allQuestions = [
-    ...(basicQuestions || []).map(q => ({ 
+    ...(basicQuestions || []).map((q, index) => ({ 
       difficulty: 'basic',
       question: q.question || '',
-      options: q.options || [],
-      option1: q.options?.[0] || '',
-      option2: q.options?.[1] || '',
-      option3: q.options?.[2] || '',
-      option4: q.options?.[3] || '',
-      correctAnswer: q.correctAnswer || '',
-      explanation: q.explanation || 'null'
+      options: {
+        option1: q.options?.[0] || '',
+        option2: q.options?.[1] || '',
+        option3: q.options?.[2] || '',
+        option4: q.options?.[3] || '',
+      },
+      questionHash: generateQuestionHash(examId, practiceArea, 'basic', index, q.question || ''),
+      questionIndex: index,
     })),
-    ...(intermediateQuestions || []).map(q => ({ 
+    ...(intermediateQuestions || []).map((q, index) => ({ 
       difficulty: 'intermediate',
       question: q.question || '',
-      options: q.options || [],
-      option1: q.options?.[0] || '',
-      option2: q.options?.[1] || '',
-      option3: q.options?.[2] || '',
-      option4: q.options?.[3] || '',
-      correctAnswer: q.correctAnswer || '',
-      explanation: q.explanation || 'null'
+      options: {
+        option1: q.options?.[0] || '',
+        option2: q.options?.[1] || '',
+        option3: q.options?.[2] || '',
+        option4: q.options?.[3] || '',
+      },
+      questionHash: generateQuestionHash(examId, practiceArea, 'intermediate', index, q.question || ''),
+      questionIndex: index,
     })),
-    ...(advancedQuestions || []).map(q => ({ 
+    ...(advancedQuestions || []).map((q, index) => ({ 
       difficulty: 'advanced',
       question: q.question || '',
-      options: q.options || [],
-      option1: q.options?.[0] || '',
-      option2: q.options?.[1] || '',
-      option3: q.options?.[2] || '',
-      option4: q.options?.[3] || '',
-      correctAnswer: q.correctAnswer || '',
-      explanation: q.explanation || 'null'
+      options: {
+        option1: q.options?.[0] || '',
+        option2: q.options?.[1] || '',
+        option3: q.options?.[2] || '',
+        option4: q.options?.[3] || '',
+      },
+      questionHash: generateQuestionHash(examId, practiceArea, 'advanced', index, q.question || ''),
+      questionIndex: index,
     }))
   ];
 
-  // Shuffle the combined array
   const shuffled = shuffleArray(allQuestions);
-
-  // Return specified count (or all if less available)
   return shuffled.slice(0, Math.min(count, shuffled.length));
 };
 
-export const getExamSyllabus = async (req: Request, res: Response) => {
+// ✅ GET EXAM QUESTIONS (WITHOUT ANSWERS/EXPLANATIONS)
+export const getExamQuestions = async (req: Request, res: Response) => {
   try {
     const { examName } = req.body;
 
-    // Validation
     if (!examName) {
       return res.status(400).json({
         success: false,
@@ -113,17 +136,15 @@ export const getExamSyllabus = async (req: Request, res: Response) => {
       });
     }
 
-    // Find exam
     const exam = await Exam.findOne({ examName: examName });
 
     if (!exam) {
       return res.status(404).json({
         success: false,
-        message: `Exam "${examName}" not found in the collection`,
+        message: `Exam "${examName}" not found`,
       });
     }
 
-    // Check if practiceAreas exist
     if (!exam.practiceArea || exam.practiceArea.length === 0) {
       return res.status(404).json({
         success: false,
@@ -131,20 +152,18 @@ export const getExamSyllabus = async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ Build syllabus with random questions based on configured counts
+    const examId = getIdAsString(exam._id);
+
     const practiceAreasWithQuestions = exam.practiceArea
       .map((area, index) => {
         const areaName = area.practiceArea;
         const normalizedAreaName = normalizeString(areaName);
         
-        // Try to find a match in SYLLABUS_CONFIG
         let configuredCount = 0;
         
-        // First try exact match
         if (SYLLABUS_CONFIG[normalizedAreaName] !== undefined) {
           configuredCount = SYLLABUS_CONFIG[normalizedAreaName];
         } else {
-          // Try to find a partial match
           const configKeys = Object.keys(SYLLABUS_CONFIG);
           for (const key of configKeys) {
             const normalizedKey = normalizeString(key);
@@ -155,72 +174,50 @@ export const getExamSyllabus = async (req: Request, res: Response) => {
           }
         }
         
-        // Debug: Log what we're matching
-        console.log(`Area: "${areaName}" -> Normalized: "${normalizedAreaName}" -> Count: ${configuredCount}`);
-        
-        // Skip areas with no configured count (not in syllabus)
         if (configuredCount === 0) {
           return null;
         }
 
-        // Check if area has any questions
         const totalAvailable =
           (area.basicQuestions?.length || 0) +
           (area.intermediateQuestions?.length || 0) +
           (area.advancedQuestions?.length || 0);
 
         if (totalAvailable === 0) {
-          return {
-            serialNo: index + 1,
-            areaName: areaName,
-            requiredQuestions: configuredCount,
-            totalAvailableQuestions: 0,
-            selectedQuestionCount: 0,
-            status: 'No Questions Available',
-            questions: []
-          };
+          return null;
         }
 
-        // Get random questions from this area using the configured count
-        const randomQuestions = getRandomQuestions(
+        const randomQuestions = getRandomQuestionsSecure(
           area.basicQuestions,
           area.intermediateQuestions,
           area.advancedQuestions,
-          configuredCount
+          configuredCount,
+          examId,
+          areaName
         );
 
         return {
           serialNo: index + 1,
           areaName: areaName,
-          requiredQuestions: configuredCount,
-          totalAvailableQuestions: totalAvailable,
           selectedQuestionCount: randomQuestions.length,
-          status: randomQuestions.length >= configuredCount ? 'Complete' : 'Insufficient',
           questions: randomQuestions.map((q, qIndex) => ({
             questionNo: qIndex + 1,
+            questionHash: q.questionHash,
             question: q.question,
-            options: {
-              option1: q.option1,
-              option2: q.option2,
-              option3: q.option3,
-              option4: q.option4,
-            },
-            correctAnswer: q.correctAnswer,
+            options: q.options,
             difficulty: q.difficulty,
-            explanation: q.explanation,
+            practiceArea: areaName,
           })),
         };
       })
-      .filter(area => area !== null);
+      .filter(area => area !== null && area.questions && area.questions.length > 0);
 
-    // Calculate actual totals based on available questions
     const totalSelectedQuestions = practiceAreasWithQuestions.reduce(
-      (sum, area) => sum + area.selectedQuestionCount,
+      (sum, area) => sum + (area?.selectedQuestionCount || 0),
       0
     );
 
     const totalRequiredQuestions = Object.values(SYLLABUS_CONFIG)
-      .filter(count => count > 0)
       .reduce((sum, count) => sum + count, 0);
 
     const syllabus = {
@@ -241,14 +238,224 @@ export const getExamSyllabus = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Syllabus with random questions retrieved successfully',
+      message: 'Exam questions retrieved successfully',
       data: syllabus,
     });
   } catch (err) {
-    console.error('Error fetching exam syllabus:', err);
+    console.error('Error fetching exam questions:', err);
     return res.status(500).json({
       success: false,
       message: 'Internal server error',
     });
+  }
+};
+
+// ✅ SUBMIT EXAM AND GET RESULTS (WITH ANSWERS/EXPLANATIONS)
+export const submitExamResults = async (req: Request, res: Response) => {
+  try {
+    const { 
+      examName, 
+      userAnswers, // Array of { questionHash, userAnswer }
+      startTime,
+      endTime 
+    } = req.body;
+
+    if (!examName || !userAnswers || !Array.isArray(userAnswers)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Exam name and user answers are required',
+      });
+    }
+
+    const exam = await Exam.findOne({ examName: examName });
+
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        message: `Exam "${examName}" not found`,
+      });
+    }
+
+    const examId = getIdAsString(exam._id);
+
+    // Build a map of questionHash -> question details
+    const questionMap = new Map<string, any>();
+    
+    exam.practiceArea.forEach(area => {
+      // Process basic questions
+      if (area.basicQuestions && area.basicQuestions.length > 0) {
+        area.basicQuestions.forEach((q, index) => {
+          const hash = generateQuestionHash(examId, area.practiceArea, 'basic', index, q.question || '');
+          questionMap.set(hash, {
+            question: q.question,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+            difficulty: 'basic',
+            practiceArea: area.practiceArea
+          });
+        });
+      }
+
+      // Process intermediate questions
+      if (area.intermediateQuestions && area.intermediateQuestions.length > 0) {
+        area.intermediateQuestions.forEach((q, index) => {
+          const hash = generateQuestionHash(examId, area.practiceArea, 'intermediate', index, q.question || '');
+          questionMap.set(hash, {
+            question: q.question,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+            difficulty: 'intermediate',
+            practiceArea: area.practiceArea
+          });
+        });
+      }
+
+      // Process advanced questions
+      if (area.advancedQuestions && area.advancedQuestions.length > 0) {
+        area.advancedQuestions.forEach((q, index) => {
+          const hash = generateQuestionHash(examId, area.practiceArea, 'advanced', index, q.question || '');
+          questionMap.set(hash, {
+            question: q.question,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+            difficulty: 'advanced',
+            practiceArea: area.practiceArea
+          });
+        });
+      }
+    });
+
+    // Process user answers and calculate results
+    const results = userAnswers.map(({ questionHash, userAnswer }: { questionHash: string; userAnswer: string }) => {
+      const question = questionMap.get(questionHash);
+      
+      if (!question) {
+        console.warn(`Question not found for hash: ${questionHash}`);
+        return null;
+      }
+
+      const isCorrect = userAnswer === question.correctAnswer;
+
+      return {
+        questionHash,
+        question: question.question,
+        options: {
+          option1: question.options?.[0] || '',
+          option2: question.options?.[1] || '',
+          option3: question.options?.[2] || '',
+          option4: question.options?.[3] || '',
+        },
+        userAnswer: userAnswer || 'Not Answered',
+        correctAnswer: question.correctAnswer,
+        isCorrect,
+        difficulty: question.difficulty,
+        explanation: question.explanation || 'No explanation available',
+        practiceArea: question.practiceArea,
+      };
+    }).filter(result => result !== null);
+
+    // Calculate scores
+    const totalQuestions = results.length;
+    const correctAnswers = results.filter(r => r && r.isCorrect).length;
+    const incorrectAnswers = results.filter(r => r && !r.isCorrect && r.userAnswer !== 'Not Answered').length;
+    const notAnswered = results.filter(r => r && r.userAnswer === 'Not Answered').length;
+    const score = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+    const passed = score >= 45;
+
+    const timeTaken = startTime && endTime 
+      ? Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000) 
+      : 0;
+
+    const breakdownByDifficulty = {
+      basic: {
+        total: results.filter(r => r && r.difficulty === 'basic').length,
+        correct: results.filter(r => r && r.difficulty === 'basic' && r.isCorrect).length,
+        percentage: 0,
+      },
+      intermediate: {
+        total: results.filter(r => r && r.difficulty === 'intermediate').length,
+        correct: results.filter(r => r && r.difficulty === 'intermediate' && r.isCorrect).length,
+        percentage: 0,
+      },
+      advanced: {
+        total: results.filter(r => r && r.difficulty === 'advanced').length,
+        correct: results.filter(r => r && r.difficulty === 'advanced' && r.isCorrect).length,
+        percentage: 0,
+      },
+    };
+
+    breakdownByDifficulty.basic.percentage = breakdownByDifficulty.basic.total > 0
+      ? parseFloat(((breakdownByDifficulty.basic.correct / breakdownByDifficulty.basic.total) * 100).toFixed(2))
+      : 0;
+    breakdownByDifficulty.intermediate.percentage = breakdownByDifficulty.intermediate.total > 0
+      ? parseFloat(((breakdownByDifficulty.intermediate.correct / breakdownByDifficulty.intermediate.total) * 100).toFixed(2))
+      : 0;
+    breakdownByDifficulty.advanced.percentage = breakdownByDifficulty.advanced.total > 0
+      ? parseFloat(((breakdownByDifficulty.advanced.correct / breakdownByDifficulty.advanced.total) * 100).toFixed(2))
+      : 0;
+
+    const practiceAreas = [...new Set(results.filter(r => r).map(r => r!.practiceArea))];
+    const breakdownByArea = practiceAreas.map(areaName => {
+      const areaResults = results.filter(r => r && r.practiceArea === areaName);
+      const correct = areaResults.filter(r => r && r.isCorrect).length;
+      const total = areaResults.length;
+      
+      return {
+        areaName,
+        total,
+        correct,
+        incorrect: total - correct,
+        percentage: total > 0 ? parseFloat(((correct / total) * 100).toFixed(2)) : 0,
+      };
+    }).sort((a, b) => b.percentage - a.percentage);
+
+    const resultData = {
+      examId: exam._id,
+      examName: exam.examName,
+      totalQuestions,
+      correctAnswers,
+      incorrectAnswers,
+      notAnswered,
+      score: parseFloat(score.toFixed(2)),
+      passed,
+      totalMarks: 100,
+      passingMarks: 45,
+      timeTaken,
+      timeTakenFormatted: formatTime(timeTaken),
+      startTime,
+      endTime,
+      results,
+      breakdownByDifficulty,
+      breakdownByArea,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: 'Exam submitted successfully',
+      data: resultData,
+    });
+  } catch (err) {
+    console.error('Error submitting exam:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+const formatTime = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  } else {
+    return `${secs}s`;
   }
 };
