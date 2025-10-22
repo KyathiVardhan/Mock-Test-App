@@ -109,7 +109,7 @@ function App() {
             
             {/* <Route path="/MockExam" element={<MockExam />} /> */}
             <Route path="/ExamQuestions" element={<ExamQuestions />} />
-            <Route path="/exam-results" element={<ExamResults />} />
+            <Route path="/exam-results/:examId" element={<ExamResults />} />
             <Route path="/register" element={
               <PublicRoute>
                 <RegisterPage />
