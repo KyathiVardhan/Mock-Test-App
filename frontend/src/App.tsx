@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import {  Routes, Route, Navigate, HashRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Header from './components/Header';
 import LandingPage from './pages/LandingPage';
@@ -59,7 +59,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <HashRouter>
         <div className="min-h-screen bg-gray-50">
           <Header />
           <Routes>
@@ -150,7 +150,7 @@ function App() {
             } />
           </Routes>
         </div>
-      </Router>
+      </HashRouter>
     </AuthProvider>
   );
 }

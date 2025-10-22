@@ -8,6 +8,7 @@ import { loginUser } from "./controller/userLogin";
 import testRoutes from "./routes/testRoutes";
 import adminRoutes from '../users/routes/adminRoutes'
 import examRoutes from '../users/routes/examRoutes'
+import { oneCreditCompleted, verifyLimitOfUser } from "./controller/limitVerifyConroller";
 
 const app = express();
 
@@ -22,6 +23,8 @@ connectDB();
 
 app.use("/api/register", registerUser);
 app.use("/api/login", loginUser);
+app.use("/api/verify-limit", verifyLimitOfUser);
+app.use("/api/credit-decrease", oneCreditCompleted); // Changed to app.post
 app.use("/api/tests", testRoutes);
 app.use("/api/admin/", adminRoutes);
 app.use("/api/exams/", examRoutes)

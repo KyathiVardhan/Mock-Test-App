@@ -3,7 +3,7 @@ import { IUser } from '../models/registerUser';
 
 // Define payload interface for regular users
 interface JWTPayload {
-    userId: string;
+    _id: string;
     email: string;
     name: string;
     isVerified?: boolean;
@@ -20,7 +20,7 @@ interface AdminJWTPayload {
 // Generate JWT Token for regular users
 export const generateToken = (user: IUser): string => {
     const payload: JWTPayload = {
-        userId: user._id.toString(),
+        _id: user._id.toString(),
         email: user.email,
         name: user.name,
         isVerified: user.isVerified

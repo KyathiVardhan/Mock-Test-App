@@ -77,6 +77,9 @@ export default function ExamTest() {
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showNavigationWarning, setShowNavigationWarning] = useState(false);
+  const [userLimit, setUserLimit] = useState<number | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<string | null>(null);
 
   // Redirect if no exam data
   useEffect(() => {
@@ -124,10 +127,47 @@ export default function ExamTest() {
     return shuffled;
   };
 
+  // Verify user's test limit
+  useEffect(() => {
+    const verifyUserLimit = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/verify-limit', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+          setError(data.message);
+          setUserLimit(0);
+          return;
+        }
+
+        setUserLimit(data.limit);
+        setUserName(data.userName);
+        setSubscription(data.subscription);
+
+        if (data.limit === 0) {
+          setError('You have exhausted your test attempts. Please upgrade your subscription to continue.');
+          return;
+        }
+      } catch (err: any) {
+        console.error('Error verifying limit:', err);
+        setError('Failed to verify test limit. Please try again.');
+      }
+    };
+
+    verifyUserLimit();
+  }, []);
+
   // Fetch exam questions WITHOUT answers
   useEffect(() => {
     const fetchExamQuestions = async () => {
-      if (!exam) return;
+      if (!exam || userLimit === 0) return;
 
       try {
         setLoading(true);
@@ -356,12 +396,36 @@ export default function ExamTest() {
           <AlertTriangle className="h-12 w-12 text-red-600 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Exam</h3>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition-colors"
-          >
-            Back to Dashboard
-          </button>
+          {userLimit === 0 ? (
+            <>
+              <p className="text-sm text-gray-500 mb-4">
+                {subscription ? 
+                  `Current subscription: ${subscription}` : 
+                  'No active subscription'}
+              </p>
+              <div className="space-x-4">
+                <button
+                  onClick={() => navigate('/subscription')}
+                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Upgrade Subscription
+                </button>
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  Back to Dashboard
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          )}
         </div>
       </div>
     );
@@ -537,9 +601,17 @@ export default function ExamTest() {
               ></div>
             </div>
           </div>
-          <div className={`flex items-center space-x-2 ${timeLeft < 300 ? 'text-red-600' : 'text-orange-600'}`}>
-            <Clock className="h-5 w-5" />
-            <span className="font-mono font-semibold">{formatTime(timeLeft)}</span>
+          <div className="flex items-center space-x-4">
+            <div className={`flex items-center space-x-2 ${timeLeft < 300 ? 'text-red-600' : 'text-orange-600'}`}>
+              <Clock className="h-5 w-5" />
+              <span className="font-mono font-semibold">{formatTime(timeLeft)}</span>
+            </div>
+            {userLimit !== null && (
+              <div className="flex items-center space-x-2 text-green-600">
+                <BookOpen className="h-5 w-5" />
+                <span className="font-medium text-sm">Tests remaining: {userLimit}</span>
+              </div>
+            )}
           </div>
         </div>
 
