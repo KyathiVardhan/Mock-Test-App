@@ -333,6 +333,20 @@ export default function ExamTest() {
       const result = await response.json();
 
       if (result.success) {
+        // Decrease credit after successful submission
+        const creditResponse = await fetch('http://localhost:5000/api/credit-decrease', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const creditResult = await creditResponse.json();
+        if (!creditResult.success) {
+          console.error('Failed to decrease credit:', creditResult.message);
+        }
+
         // ✅ Navigate with backend-validated results
         navigate(`/exam-results/${examData?.examId}`, {
           state: result.data, // ← Backend calculated everything
