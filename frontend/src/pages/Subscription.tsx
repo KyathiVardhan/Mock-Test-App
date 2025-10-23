@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Check, Crown, Zap, Star } from 'lucide-react';
+import { Check, Crown, Zap, Star, BadgePlus } from 'lucide-react';
 
 export default function Subscription() {
   const { user, updateSubscription } = useAuth();
@@ -8,7 +8,7 @@ export default function Subscription() {
   const plans = [
     {
       name: 'Free',
-      price: '$0',
+      price: '₹0',
       billing: 'forever',
       icon: Zap,
       current: user?.subscription === 'free',
@@ -16,7 +16,6 @@ export default function Subscription() {
         '5 tests per month',
         'Basic question explanations',
         'Limited practice areas',
-        'Email support'
       ],
       limitations: [
         'No detailed analytics',
@@ -25,8 +24,27 @@ export default function Subscription() {
       ]
     },
     {
+      name: 'Add On',
+      price: '₹99',
+      billing: 'as pre requirment',
+      icon: BadgePlus,
+      current: user?.subscription === 'add on',
+      features: [
+        '5 tests only',
+        'No fixed time period',
+        'Basic question explanations',
+        'Limited practice areas',
+      ],
+      limitations: [
+        'No detailed analytics',
+        'No practice mode',
+        'Limited explanations'
+      ]
+
+    },
+    {
       name: 'Pro',
-      price: '$29',
+      price: '₹499',
       billing: 'per month',
       icon: Star,
       current: user?.subscription === 'pro',
@@ -36,26 +54,20 @@ export default function Subscription() {
         'Detailed explanations',
         'All practice areas',
         'Performance analytics',
-        'Practice mode',
-        'Priority support',
-        'Mobile app access'
       ],
       limitations: []
     },
     {
       name: 'Premium',
-      price: '$49',
+      price: '₹999',
       billing: 'per month',
       icon: Crown,
       current: user?.subscription === 'premium',
       features: [
-        'Unlimited tests',
+        '50 tests per month',
         'Expert-level explanations',
         'All practice areas',
         'Advanced analytics',
-        'Custom study plans',
-        'One-on-one tutoring sessions',
-        '24/7 phone support',
         'Certificate programs',
         'Early access to new content'
       ],
@@ -79,7 +91,7 @@ export default function Subscription() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8 mb-12">
+      <div className="grid md:grid-cols-4 gap-8 mb-12">
         {plans.map((plan) => (
           <div
             key={plan.name}
@@ -176,25 +188,27 @@ export default function Subscription() {
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-900">Features</th>
                   <th className="text-center py-3 px-4 font-semibold text-gray-900">Free</th>
+                  <th className='text-center py-3 px-4 font-semibold text-gray-900'>Add On</th>
                   <th className="text-center py-3 px-4 font-semibold text-blue-600">Pro</th>
                   <th className="text-center py-3 px-4 font-semibold text-yellow-600">Premium</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {[
-                  ['Tests per month', '5', '25', 'Unlimited'],
-                  ['Practice areas', 'Limited', 'All areas', 'All areas'],
-                  ['Detailed explanations', '✗', '✓', '✓'],
-                  ['Performance analytics', '✗', '✓', 'Advanced'],
-                  ['Practice mode', '✗', '✓', '✓'],
-                  ['Custom study plans', '✗', '✗', '✓'],
-                  ['Tutoring sessions', '✗', '✗', '✓'],
-                  ['Mobile app', '✗', '✓', '✓'],
-                  ['Priority support', '✗', '✓', '24/7 phone']
-                ].map(([feature, free, pro, premium], index) => (
+                  ['Tests per month', '5', '5', '25', '50'],
+                  ['Practice areas', 'Limited', 'Limited', 'All areas', 'All areas'],
+                  ['Detailed explanations', '✗', '✓', '✓', '✓'],
+                  ['Performance analytics', '✗', '✓', '✓', 'Advanced'],
+                  ['Practice mode', '✗', '✓', '✓', '✓'],
+                  // ['Custom study plans', '✗', '✗', '✓'],
+                  // ['Tutoring sessions', '✗', '✗', '✓'],
+                  // ['Mobile app', '✗', '✓', '✓'],
+                  ['Early access to new content', '✗', '✗', '✓', '✓']
+                ].map(([feature, free, AddOn, pro, premium], index) => (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="py-4 px-4 font-medium text-gray-900">{feature}</td>
                     <td className="py-4 px-4 text-center text-gray-600">{free}</td>
+                    <td className='py-4 px-4 text-center text-gray-600'>{AddOn}</td>
                     <td className="py-4 px-4 text-center text-blue-600">{pro}</td>
                     <td className="py-4 px-4 text-center text-yellow-600">{premium}</td>
                   </tr>
@@ -215,7 +229,7 @@ export default function Subscription() {
           {[
             {
               question: "Can I change my plan anytime?",
-              answer: "Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle."
+              answer: "Yes, you can upgrade your plan at any time. Changes will be reflected in your next billing cycle."
             },
             {
               question: "What payment methods do you accept?",

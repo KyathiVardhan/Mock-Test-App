@@ -1,5 +1,17 @@
+export const  BASE_URL = "http://localhost:5000/api";
 
-const BASE_URL = "http://localhost:5000/api";
+const getAuthHeaders = (isAdmin = false) => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  const token = isAdmin ? localStorage.getItem('adminToken') : localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+};
 
 export interface AuthResponse {
   success: boolean;
@@ -16,11 +28,6 @@ export interface AuthResponse {
   token?: string;
 }
 
-interface AdminLoginData {
-  email: string;
-  password: string;
-}
-
 interface AdminAuthResponse {
   success: boolean;
   message: string;
@@ -32,6 +39,23 @@ interface AdminAuthResponse {
   token?: string;
 }
 
+interface TestRegistrationResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    _id: string;
+    subject: string;
+    totalQuestions: number;
+    duration: number;
+    createdAt?: string;
+    updatedAt?: string;
+    newQuestionsAdded?: number;
+  };
+  errors?: Array<{
+    field: string;
+    message: string;
+  }>;
+}
 
 export const api = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
@@ -40,7 +64,7 @@ export const api = {
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Important for cookies
+      credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
     
@@ -52,13 +76,15 @@ export const api = {
     return data;
   },
 
+  
+
   register: async (name: string, email: string, password: string): Promise<AuthResponse> => {
     const response = await fetch(`${BASE_URL}/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Important for cookies
+      credentials: 'include',
       body: JSON.stringify({ name, email, password }),
     });
     
@@ -73,13 +99,14 @@ export const api = {
   logout: async (): Promise<void> => {
     const response = await fetch(`${BASE_URL}/logout`, {
       method: 'POST',
-      credentials: 'include', // Important for cookies
+      credentials: 'include',
     });
     
     if (!response.ok) {
       throw new Error('Logout failed');
     }
   },
+
   adminLogin: async (email: string, password: string): Promise<AdminAuthResponse> => {
     const response = await fetch(`${BASE_URL}/admin/login`, {
       method: 'POST',
@@ -96,13 +123,9 @@ export const api = {
       throw new Error(data.message || 'Admin login failed');
     }
 
-    // Store the admin token if it exists in the response
-    if (data.token) {
-      localStorage.setItem('adminToken', data.token);
-    }
-
     return data;
   },
+
   adminLogout: async (): Promise<void> => {
     const response = await fetch(`${BASE_URL}/admin/logout`, {
       method: 'POST',
@@ -118,47 +141,35 @@ export const api = {
     }
   },
 
-  adminApiCall: async (endpoint: string, options: RequestInit = {}): Promise<any> => {
-    const adminToken = localStorage.getItem('adminToken');
-    
-    const response = await fetch(`${BASE_URL}/admin${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': adminToken ? `Bearer ${adminToken}` : '',
-        ...options.headers,
-      },
-      credentials: 'include',
-    });
+  // Updated registerTest method to handle FormData properly
+  registerTest: async (formData: FormData): Promise<TestRegistrationResponse> => {
+    try {
+      const response = await fetch(`${BASE_URL}/tests/register`, {
+        method: 'POST',
+        headers: {
+          // Note: Don't set Content-Type for FormData
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}` // Add admin token
+        },
+        credentials: 'include',
+        body: formData, // Send FormData directly
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Admin API call failed');
+      if (!response.ok) {
+        // Create a proper error object with response data
+        const error = new Error(data.message || 'Test registration failed');
+        (error as any).response = { data };
+        console.log('Server response:', data); // Log the full server response
+        throw error;
+      }
+
+      return data;
+    } catch (error: any) {
+      console.error('Error in registerTest:', error);
+      throw error;
     }
-
-    return data;
   },
 
-  registerTest: async (testData: any): Promise<any> => {
-    const adminToken = localStorage.getItem('adminToken');
-    
-    const response = await fetch(`${BASE_URL}/test/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminToken}`,
-      },
-      credentials: 'include',
-      body: JSON.stringify(testData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Test registration failed');
-    }
-
-    return data;
-  }
+  
 };

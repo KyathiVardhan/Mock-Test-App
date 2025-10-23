@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Clock, CheckCircle, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { useParams, useNavigate, Link, useBeforeUnload } from 'react-router-dom';
+import { Clock, CheckCircle, ArrowLeft, AlertTriangle, X } from 'lucide-react';
 
 interface Question {
   id: string;
   questionNumber: number;
   question: string;
   options: string[];
-  correctAnswer: number;
-  explanation: string;
   originalIndex?: number; // To track original position for scoring
 }
 
@@ -36,10 +34,56 @@ export default function MockTest() {
   const [originalQuestions, setOriginalQuestions] = useState<Question[]>([]); // Store original order
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number }>({});
+  const [visitedQuestions, setVisitedQuestions] = useState<Set<number>>(new Set([0])); // Track visited questions, start with question 0
   const [timeLeft, setTimeLeft] = useState(0);
   const [testStarted, setTestStarted] = useState(false);
+  const [testStartTime, setTestStartTime] = useState<string | null>(null); // Track test start time
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false); // Track submission state
+  const [showConfirmModal, setShowConfirmModal] = useState(false); // Track confirmation modal
+  const [showNavigationWarning, setShowNavigationWarning] = useState(false); // Track navigation warning
+
+  // Prevent page refresh/close during test
+  useBeforeUnload(
+    React.useCallback(() => {
+      if (testStarted && !submitting) {
+        return "Are you sure you want to leave? Your test progress will be lost.";
+      }
+    }, [testStarted, submitting])
+  );
+
+  // Handle browser back button and navigation
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (testStarted && !submitting) {
+        event.preventDefault();
+        // Push the current state back to prevent actual navigation
+        window.history.pushState(null, '', window.location.href);
+        setShowNavigationWarning(true);
+      }
+    };
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (testStarted && !submitting) {
+        const message = "Are you sure you want to leave? Your test progress will be lost.";
+        event.returnValue = message;
+        return message;
+      }
+    };
+
+    if (testStarted && !submitting) {
+      // Push initial state to history stack
+      window.history.pushState(null, '', window.location.href);
+      window.addEventListener('popstate', handlePopState);
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [testStarted, submitting]);
 
   // Fisher-Yates shuffle algorithm
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -51,7 +95,7 @@ export default function MockTest() {
     return shuffled;
   };
 
-  // Fetch test data from API
+  // Fetch test data from API (without correct answers)
   useEffect(() => {
     const fetchTestData = async () => {
       if (!subject || !difficulty) {
@@ -115,7 +159,8 @@ export default function MockTest() {
     if (testStarted && timeLeft > 0) {
       timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
     } else if (timeLeft === 0 && testStarted) {
-      handleSubmitTest();
+      // Auto-submit when time runs out (no confirmation needed)
+      handleConfirmSubmit();
     }
     return () => clearTimeout(timer);
   }, [testStarted, timeLeft]);
@@ -128,6 +173,7 @@ export default function MockTest() {
 
   const handleStartTest = () => {
     setTestStarted(true);
+    setTestStartTime(new Date().toISOString()); // Record start time
   };
 
   const handleAnswerSelect = (answerIndex: number) => {
@@ -139,40 +185,129 @@ export default function MockTest() {
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+      const nextQuestion = currentQuestion + 1;
+      setCurrentQuestion(nextQuestion);
+      // Mark the new question as visited
+      setVisitedQuestions(prev => new Set([...prev, nextQuestion]));
     }
   };
 
   const handlePrevious = () => {
     if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
+      const prevQuestion = currentQuestion - 1;
+      setCurrentQuestion(prevQuestion);
+      // Mark the previous question as visited
+      setVisitedQuestions(prev => new Set([...prev, prevQuestion]));
     }
   };
 
-  const handleSubmitTest = () => {
-    const score = calculateScore();
-    navigate(`/results/test-${Date.now()}`, { 
-      state: { 
-        score, 
-        total: questions.length, 
-        answers: selectedAnswers, 
-        questions: questions, // Pass shuffled questions
-        originalQuestions: originalQuestions, // Pass original order
-        testData,
-        subject,
-        difficulty
-      } 
-    });
+  const handleQuestionNavigation = (questionIndex: number) => {
+    setCurrentQuestion(questionIndex);
+    // Mark the question as visited
+    setVisitedQuestions(prev => new Set([...prev, questionIndex]));
   };
 
-  const calculateScore = () => {
-    let score = 0;
-    questions.forEach((q, idx) => {
-      if (selectedAnswers[idx] !== undefined && selectedAnswers[idx] === q.correctAnswer) {
-        score += 1;
+  // Show confirmation modal for test submission
+  const handleSubmitTest = () => {
+    setShowConfirmModal(true);
+  };
+
+  // Handle "Back to Difficulty Selection" button click
+  const handleBackToDifficulty = () => {
+    if (testStarted && !submitting) {
+      setShowNavigationWarning(true);
+    } else {
+      navigate(`/test/${subject}`);
+    }
+  };
+
+  // Cancel submission
+  const handleCancelSubmit = () => {
+    setShowConfirmModal(false);
+  };
+
+  // Handle navigation warning responses
+  const handleConfirmNavigation = () => {
+    setShowNavigationWarning(false);
+    // Navigate back to difficulty selection
+    navigate(`/test/${subject}`, { replace: true });
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationWarning(false);
+    // Stay on the test page - do nothing
+  };
+
+  // Actual submit test function after confirmation
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false); // Close modal
+    setShowNavigationWarning(false); // Close navigation warning if open
+    
+    if (submitting) return; // Prevent double submission
+    
+    setSubmitting(true);
+    
+    try {
+      const endTime = new Date().toISOString();
+      
+      // Convert selectedAnswers to match the original question order
+      const answersInOriginalOrder: { [key: number]: number } = {};
+      
+      // Map answers back to original question indices
+      Object.keys(selectedAnswers).forEach(shuffledIndex => {
+        const shuffledQuestionIndex = parseInt(shuffledIndex);
+        const originalIndex = questions[shuffledQuestionIndex]?.originalIndex;
+        if (originalIndex !== undefined) {
+          answersInOriginalOrder[originalIndex] = selectedAnswers[shuffledQuestionIndex];
+        }
+      });
+
+      const submissionData = {
+        testId: testData?.testId,
+        difficulty: testData?.difficulty,
+        answers: answersInOriginalOrder, // Send answers mapped to original indices
+        startTime: testStartTime,
+        endTime: endTime
+      };
+
+      console.log('Submitting test:', submissionData); // Debug log
+
+      const response = await fetch('http://localhost:5000/api/tests/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(submissionData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    });
-    return score;
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Navigate to results page with the complete results from server
+        navigate(`/results/test-${Date.now()}`, { 
+          state: { 
+            ...result.data, // This now includes score, results with correct answers and explanations
+            shuffledQuestions: questions, // Keep track of shuffled order for reference
+            originalQuestions: originalQuestions,
+            userAnswers: selectedAnswers // Keep track of user's answers in shuffled order
+          },
+          replace: true // Use replace to prevent back navigation to test
+        });
+      } else {
+        throw new Error(result.message || 'Failed to submit test');
+      }
+
+    } catch (error: any) {
+      console.error('Error submitting test:', error);
+      alert(`Failed to submit test: ${error.message}. Please try again.`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Shuffle questions again if user wants to restart
@@ -181,6 +316,7 @@ export default function MockTest() {
     setQuestions(shuffled);
     setCurrentQuestion(0);
     setSelectedAnswers({});
+    setVisitedQuestions(new Set([0])); // Reset visited questions
     console.log('Questions reshuffled!');
   };
 
@@ -201,6 +337,27 @@ export default function MockTest() {
     };
     return colors[level?.toLowerCase() as keyof typeof colors] || 'bg-gray-50 border-gray-200';
   };
+
+  // Function to get question button styling
+  const getQuestionButtonStyle = (index: number) => {
+    const isAnswered = selectedAnswers[index] !== undefined;
+    const isCurrent = index === currentQuestion;
+    const isVisited = visitedQuestions.has(index);
+
+    if (isCurrent) {
+      return 'bg-amber-600 text-white'; // Current question (amber)
+    } else if (isAnswered) {
+      return 'bg-green-500 text-white hover:bg-green-600'; // Answered (green)
+    } else if (isVisited) {
+      return 'bg-red-600 text-white hover:bg-red-700'; // Visited but not answered (red)
+    } else {
+      return 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'; // Not visited (white)
+    }
+  };
+
+  // Calculate stats for confirmation modal
+  const answeredCount = Object.keys(selectedAnswers).length;
+  const unansweredCount = questions.length - answeredCount;
 
   // Loading state
   if (loading) {
@@ -228,12 +385,12 @@ export default function MockTest() {
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Test</h3>
           <p className="text-gray-600 mb-4">{error}</p>
           <div className="space-x-4">
-            <Link
-              to={`/test/${subject}`}
+            <button
+              onClick={handleBackToDifficulty}
               className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition-colors"
             >
               Back to Difficulty Selection
-            </Link>
+            </button>
             <button
               onClick={() => window.location.reload()}
               className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
@@ -251,13 +408,13 @@ export default function MockTest() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link
-            to={`/test/${subject}`}
+          <button
+            onClick={handleBackToDifficulty}
             className="inline-flex items-center text-amber-600 hover:text-amber-700"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Difficulty Selection
-          </Link>
+          </button>
         </div>
 
         <div className={`bg-white rounded-lg shadow-sm border p-8 ${getDifficultyBg(testData.difficulty)}`}>
@@ -327,7 +484,7 @@ export default function MockTest() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-4 mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
               <span className="text-sm font-medium text-gray-600">
@@ -352,6 +509,17 @@ export default function MockTest() {
             <span className="font-mono font-semibold">{formatTime(timeLeft)}</span>
           </div>
         </div>
+        
+        {/* Back button */}
+        <div className="border-t border-amber-200 pt-4">
+          <button
+            onClick={handleBackToDifficulty}
+            className="inline-flex items-center text-amber-600 hover:text-amber-700 text-sm"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Difficulty Selection
+          </button>
+        </div>
       </div>
 
       {/* Question */}
@@ -360,9 +528,12 @@ export default function MockTest() {
           <span className="text-sm text-gray-500">
             Question {currentQuestion + 1}
           </span>
-          <span className="text-xs text-gray-400">
-            ID: {questions[currentQuestion]?.id?.slice(-6) || 'N/A'}
-          </span>
+          {/* Conditionally show ID only in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <span className="text-xs text-gray-400">
+              ID: {questions[currentQuestion]?.id?.slice(-6) || 'N/A'}
+            </span>
+          )}
         </div>
         <h2 className="text-xl font-semibold text-gray-900 mb-6">
           {questions[currentQuestion]?.question}
@@ -420,7 +591,8 @@ export default function MockTest() {
           <div className="flex space-x-3">
             <button
               onClick={handleSubmitTest}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+              disabled={submitting}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Submit Test
             </button>
@@ -433,16 +605,8 @@ export default function MockTest() {
             {questions.map((_, index) => (
               <button
                 key={index}
-                onClick={() => setCurrentQuestion(index)}
-                className={`w-10 h-10 rounded-lg text-sm font-semibold transition-colors ${
-                  selectedAnswers[index] !== undefined
-                    ? index === currentQuestion
-                      ? 'bg-green-600 text-white'
-                      : 'bg-green-100 text-green-800'
-                    : index === currentQuestion
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                onClick={() => handleQuestionNavigation(index)}
+                className={`w-10 h-10 rounded-lg text-sm font-semibold transition-colors ${getQuestionButtonStyle(index)}`}
               >
                 {index + 1}
               </button>
@@ -450,7 +614,7 @@ export default function MockTest() {
           </div>
           <div className="flex items-center space-x-4 mt-3 text-xs text-gray-500">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-100 rounded mr-1"></div>
+              <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
               <span>Answered</span>
             </div>
             <div className="flex items-center">
@@ -458,27 +622,197 @@ export default function MockTest() {
               <span>Current</span>
             </div>
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-gray-100 rounded mr-1"></div>
-              <span>Unanswered</span>
+              <div className="w-3 h-3 bg-red-600 rounded mr-1"></div>
+              <span>Visited but Unanswered</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-white border border-gray-300 rounded mr-1"></div>
+              <span>Not Visited</span>
             </div>
           </div>
 
           {/* Progress Stats */}
           <div className="mt-4 pt-4 border-t border-amber-200">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Answered: {Object.keys(selectedAnswers).length}/{questions.length}</span>
-              <span>Remaining: {questions.length - Object.keys(selectedAnswers).length}</span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="flex justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-500">Answered:</span>
+                <span className="font-semibold text-green-600">
+                  {Object.keys(selectedAnswers).length}
+                </span>
+              </div>
+              <div className="flex justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-500">Visited:</span>
+                <span className="font-semibold text-blue-600">
+                  {visitedQuestions.size}
+                </span>
+              </div>
+              <div className="flex justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-500">Skipped:</span>
+                <span className="font-semibold text-red-600">
+                  {visitedQuestions.size - Object.keys(selectedAnswers).length}
+                </span>
+              </div>
+              <div className="flex justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-500">Remaining:</span>
+                <span className="font-semibold text-gray-600">
+                  {questions.length - visitedQuestions.size}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Enhanced Navigation Warning Modal */}
+      {showNavigationWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-3">
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
+            </div>
+            
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Leave Test?</h3>
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to leave the test? Your current progress will be <strong>lost forever</strong>.
+              </p>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-left">
+                <h4 className="font-semibold text-amber-900 mb-2">Current Progress:</h4>
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-amber-700">Questions Answered:</span>
+                    <span className="font-medium text-amber-900">{answeredCount} of {questions.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-amber-700">Time Remaining:</span>
+                    <span className="font-medium text-amber-900">{formatTime(timeLeft)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-700 font-medium">
+                  ⚠️ Warning: Leaving now will <strong>NOT</strong> save your answers. All progress will be lost!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancelNavigation}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Stay & Continue Test
+              </button>
+              <button
+                onClick={handleConfirmNavigation}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Leave Test
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Test Submission Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Submit Test?</h3>
+              <button
+                onClick={handleCancelSubmit}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="bg-green-100 rounded-full p-3">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+              </div>
+
+              <p className="text-gray-700 mb-4 text-center">
+                Are you sure you want to submit your test? Once submitted, you <strong>cannot make any changes</strong> to your answers.
+              </p>
+              
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-gray-900 mb-2">Test Summary:</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Questions:</span>
+                    <span className="font-medium">{questions.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Time Left:</span>
+                    <span className="font-medium text-orange-600">{formatTime(timeLeft)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-600">Answered:</span>
+                    <span className="font-medium text-green-600">{answeredCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-red-600">Unanswered:</span>
+                    <span className="font-medium text-red-600">{unansweredCount}</span>
+                  </div>
+                </div>
+              </div>
+
+              {unansweredCount > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 mr-2" />
+                    <p className="text-amber-800 text-sm">
+                      <strong>Warning:</strong> You have {unansweredCount} unanswered question{unansweredCount !== 1 ? 's' : ''}. 
+                      These will be marked as <strong>incorrect</strong>.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancelSubmit}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Review Answers
+              </button>
+              <button
+                onClick={handleConfirmSubmit}
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                Submit Test
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Warning for low time */}
       {timeLeft < 300 && timeLeft > 0 && (
-        <div className="fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
+        <div className="fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse z-40">
           <div className="flex items-center">
             <AlertTriangle className="h-4 w-4 mr-2" />
             <span className="text-sm font-semibold">Less than 5 minutes remaining!</span>
+          </div>
+        </div>
+      )}
+
+      {/* Submission overlay */}
+      {submitting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+            <p className="text-gray-700 font-semibold">Submitting your test...</p>
+            <p className="text-gray-500 text-sm mt-2">Please don't close this window</p>
           </div>
         </div>
       )}

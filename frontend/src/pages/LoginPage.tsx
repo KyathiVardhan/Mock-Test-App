@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -44,14 +44,14 @@ export default function LoginPage() {
             Sign in to access your legal mock tests
           </p>
         </div>
-        
+
         <div className="bg-white py-8 px-6 shadow-xl rounded-xl border border-gray-100">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
             </div>
           )}
-          
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-base font-medium text-gray-700 mb-2">
@@ -130,8 +130,13 @@ export default function LoginPage() {
                 <Link to="/register" className="text-[#3C222F] hover:text-[#4b2438] font-medium transition-colors">
                   Create one now
                 </Link>
+
               </p>
+              <Link to="/adminPage" className=" text-md text-[#3C222F] hover:text-[#4b2438] font-medium transition-colors">
+                Admin Login
+              </Link>
             </div>
+
           </form>
         </div>
       </div>

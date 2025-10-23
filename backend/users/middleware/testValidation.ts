@@ -2,46 +2,37 @@ import { body } from 'express-validator';
 
 export const validateTestRegistration = [
     body('subject')
-        .isString()
-        .notEmpty()
+        .exists({ checkFalsy: true })
         .withMessage('Subject is required')
-        .isLength({ min: 2, max: 50 })
-        .withMessage('Subject must be between 2-50 characters'),
+        .bail()
+        .trim()
+        .toLowerCase()
+        .isIn([
+            'constitutional-law', 'criminal-law', 'civil-law', 'corporate-law',
+            'contract-law', 'property-law', 'family-law', 'administrative-law',
+            'environmental-law', 'international-law', 'ipc-law', 'crpc-law', 'labor-law', 'tax-law'
+        ])
+        .withMessage('Invalid subject'),
     
-    body('category')
-        .isString()
-        .notEmpty()
-        .withMessage('Category is required')
-        .isIn(['BASIC', 'INTERMEDIATE', 'ADVANCED', 'basic', 'intermediate', 'advanced'])
-        .withMessage('Category must be BASIC, INTERMEDIATE, or ADVANCED'),
-    
-    body('questions')
-        .isArray({ min: 1 })
-        .withMessage('Questions array is required with at least one question'),
-    
-    body('questions.*.question')
-        .isString()
-        .notEmpty()
-        .withMessage('Question text is required'),
-    
-    body('questions.*.options')
-        .isArray({ min: 2, max: 6 })
-        .withMessage('Each question must have 2-6 options'),
-    
-    body('questions.*.correctAnswer')
-        .notEmpty()
-        .withMessage('Correct answer is required'),
-    
-    body('questions.*.explanation')
-        .isString()
-        .notEmpty()
-        .withMessage('Explanation is required'),
+    body('difficulty')
+        .exists({ checkFalsy: true })
+        .withMessage('Difficulty is required')
+        .bail()
+        .trim()
+        .toLowerCase()
+        .isIn(['basic', 'intermediate', 'advanced'])
+        .withMessage('Difficulty must be basic, intermediate, or advanced'),
     
     body('duration')
-        .optional()
-        .isNumeric()
-        .isFloat({ min: 0.5, max: 10 })
-        .withMessage('Duration must be between 0.5-10 minutes per question'),
+        .exists({ checkFalsy: true })
+        .withMessage('Duration is required')
+        .bail()
+        .trim()
+        .toInt()
+        .isInt({ min: 1, max: 180 })
+        .withMessage('Duration must be between 1-180 minutes'),
+    
+    // CSV provides questions; no body questions validation is required here
     
     body('price')
         .optional()

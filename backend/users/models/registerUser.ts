@@ -9,6 +9,8 @@ export interface IUser extends Document {
     password: string;
     avatar?: string;
     isVerified: boolean;
+    subscription: string,
+    limit?: number;
     createdAt: Date;
     updatedAt: Date;
     // comparePassword(candidatePassword: string): Promise<boolean>;
@@ -20,6 +22,9 @@ export interface IUserInput {
     email: string;
     password: string;
     avatar?: string;
+    limit?: number;
+
+
 }
 
 // User Schema
@@ -54,20 +59,34 @@ const userSchema = new Schema<IUser>({
     },
     isVerified: {
         type: Boolean,
+
         default: false
+    },
+    subscription: {
+        type: String,
+        trim: true,
+        default: 'free'
+    },
+    limit: {
+        type: Number,
+        default: 2,
+        min: [0, 'Limit cannot be negative'],
+        validate: {
+            validator: Number.isInteger,
+            message: 'Limit must be an integer'
+        }
     }
 }, {
     timestamps: true,
-    
 });
 
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
         return next();
     }
-    
+
     try {
         const salt = await bcrypt.genSalt(12);
         this.password = await bcrypt.hash(this.password, salt);

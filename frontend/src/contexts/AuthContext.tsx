@@ -39,6 +39,8 @@ interface AuthContextType {
   adminLogin: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   adminLogout: () => Promise<void>;
+  isAuthenticated: boolean;
+  hasAdminAccess: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -49,38 +51,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user and admin data on mount
+    // Check for stored authentication data on mount
     const checkAuth = async () => {
-      // Check for regular user
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-        } catch (error) {
-          console.error('Error parsing stored user data:', error);
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
+      try {
+        // Check for regular user
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+          } catch (error) {
+            console.error('Error parsing stored user data:', error);
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+          }
         }
-      }
 
-      // Check for admin user
-      const storedAdmin = localStorage.getItem('admin');
-      if (storedAdmin) {
-        try {
-          const adminData = JSON.parse(storedAdmin);
-          setAdmin(adminData);
-        } catch (error) {
-          console.error('Error parsing stored admin data:', error);
-          localStorage.removeItem('admin');
-          localStorage.removeItem('adminToken');
+        // Check for admin user  
+        const storedAdmin = localStorage.getItem('admin');
+        if (storedAdmin) {
+          try {
+            const adminData = JSON.parse(storedAdmin);
+            setAdmin(adminData);
+          } catch (error) {
+            console.error('Error parsing stored admin data:', error);
+            localStorage.removeItem('admin');
+            localStorage.removeItem('adminToken');
+          }
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      } finally {
+        // Small delay to prevent flash of loading screen
+        setTimeout(() => {
+          setLoading(false);
+        }, 100);
       }
-
-      // Small delay to prevent flash of loading screen
-      setTimeout(() => {
-        setLoading(false);
-      }, 100);
     };
 
     checkAuth();
@@ -120,8 +126,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: response.data.name,
         avatar: response.data.avatar,
         isVerified: response.data.isVerified,
-        subscription: response.data.subscription || 'free', // Default subscription
-        testsCompleted: response.data.testsCompleted || 0 // Default tests completed
+        subscription: response.data.subscription || 'free',
+        testsCompleted: response.data.testsCompleted || 0
       };
 
       setUser(userData);
@@ -197,6 +203,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     admin,
     loading,
     isAdmin: !!admin,
+    isAuthenticated: !!(user || admin),
+    hasAdminAccess: !!admin && admin.role === 'admin',
     login,
     register,
     adminLogin,
@@ -219,7 +227,7 @@ export function useAuth() {
   return context;
 }
 
-// Additional hook specifically for admin operations
+// Enhanced admin hook with better error handling
 export function useAdmin() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -233,6 +241,7 @@ export function useAdmin() {
   return {
     admin: context.admin,
     adminLogout: context.adminLogout,
-    isAdmin: context.isAdmin
+    isAdmin: context.isAdmin,
+    hasAdminAccess: context.hasAdminAccess
   };
 }
