@@ -69,7 +69,7 @@ const userSchema = new Schema<IUser>({
     },
     limit: {
         type: Number,
-        default: 2,
+        default: 5,
         min: [0, 'Limit cannot be negative'],
         validate: {
             validator: Number.isInteger,

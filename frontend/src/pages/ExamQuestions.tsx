@@ -127,11 +127,14 @@ export default function ExamTest() {
     return shuffled;
   };
 
-  // Verify user's test limit
+  // ✅ Verify user's test limit first, then only fetch exam if allowed
   useEffect(() => {
-    const verifyUserLimit = async () => {
+    const verifyAndFetchExam = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/verify-limit', {
+        setLoading(true);
+
+        // Step 1: Verify user limit
+        const limitResponse = await fetch('http://localhost:5000/api/verify-limit', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -139,88 +142,70 @@ export default function ExamTest() {
           },
         });
 
-        const data = await response.json();
+        const limitData = await limitResponse.json();
 
-        if (!data.success) {
-          setError(data.message);
+        if (!limitData.success || limitData.limit === 0) {
+          setError(
+            limitData.message ||
+            'You have exhausted your test attempts. Please upgrade your subscription to continue.'
+          );
           setUserLimit(0);
+          setUserName(limitData.userName);
+          setSubscription(limitData.subscription);
+          setLoading(false);
+          return; // ✅ Stop here — don’t fetch exam
+        }
+
+        // ✅ Store user info
+        setUserLimit(limitData.limit);
+        setUserName(limitData.userName);
+        setSubscription(limitData.subscription);
+
+        // Step 2: Now fetch exam data (only if user has limit)
+        if (!exam) {
+          setError('Exam not found.');
+          setLoading(false);
           return;
         }
 
-        setUserLimit(data.limit);
-        setUserName(data.userName);
-        setSubscription(data.subscription);
-
-        if (data.limit === 0) {
-          setError('You have exhausted your test attempts. Please upgrade your subscription to continue.');
-          return;
-        }
-      } catch (err: any) {
-        console.error('Error verifying limit:', err);
-        setError('Failed to verify test limit. Please try again.');
-      }
-    };
-
-    verifyUserLimit();
-  }, []);
-
-  // Fetch exam questions WITHOUT answers
-  useEffect(() => {
-    const fetchExamQuestions = async () => {
-      if (!exam || userLimit === 0) return;
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch('http://localhost:5000/api/exams/get-exam', {
+        const examResponse = await fetch('http://localhost:5000/api/exams/get-exam', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ examName: exam.examName }),
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!examResponse.ok) throw new Error(`HTTP error! status: ${examResponse.status}`);
 
-        const result = await response.json();
+        const examResult = await examResponse.json();
+        if (!examResult.success) throw new Error(examResult.message || 'Failed to fetch exam data');
 
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to fetch exam data');
-        }
+        // ✅ Set exam data
+        setExamData(examResult.data);
 
-        setExamData(result.data);
-
-        // Flatten all questions from all practice areas
+        // Flatten all questions
         const allQuestions: Question[] = [];
-        result.data.practiceAreas.forEach((area: PracticeArea) => {
+        examResult.data.practiceAreas.forEach((area: PracticeArea) => {
           area.questions.forEach((question: Question) => {
-            allQuestions.push({
-              ...question,
-              practiceArea: area.areaName,
-            });
+            allQuestions.push({ ...question, practiceArea: area.areaName });
           });
         });
 
-        // Shuffle all questions
+        // Shuffle and set
         const shuffled = shuffleArray(allQuestions);
         setFlattenedQuestions(shuffled);
-
-        setTimeLeft(result.data.examDetails.duration * 60);
-
+        setTimeLeft(examResult.data.examDetails.duration * 60);
       } catch (err: any) {
-        console.error('Error fetching exam data:', err);
+        console.error('Error loading exam or verifying limit:', err);
         setError(err.message || 'Failed to load exam data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchExamQuestions();
+    verifyAndFetchExam();
   }, [exam]);
+
 
   // Timer effect
   useEffect(() => {
@@ -413,8 +398,8 @@ export default function ExamTest() {
           {userLimit === 0 ? (
             <>
               <p className="text-sm text-gray-500 mb-4">
-                {subscription ? 
-                  `Current subscription: ${subscription}` : 
+                {subscription ?
+                  `Current subscription: ${subscription}` :
                   'No active subscription'}
               </p>
               <div className="space-x-4">
@@ -651,11 +636,10 @@ export default function ExamTest() {
               </span>
             )}
           </div>
-          <span className={`text-xs px-2 py-1 rounded ${
-            currentQ.difficulty === 'basic' ? 'bg-green-100 text-green-800' :
-            currentQ.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-            'bg-red-100 text-red-800'
-          }`}>
+          <span className={`text-xs px-2 py-1 rounded ${currentQ.difficulty === 'basic' ? 'bg-green-100 text-green-800' :
+              currentQ.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+            }`}>
             {currentQ.difficulty}
           </span>
         </div>
@@ -669,18 +653,16 @@ export default function ExamTest() {
             <button
               key={key}
               onClick={() => handleAnswerSelect(value)}
-              className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                selectedAnswers[currentQuestion] === value
+              className={`w-full text-left p-4 rounded-lg border-2 transition-all ${selectedAnswers[currentQuestion] === value
                   ? 'border-amber-500 bg-amber-50 text-amber-900'
                   : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50'
-              }`}
+                }`}
             >
               <div className="flex items-center">
-                <div className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
-                  selectedAnswers[currentQuestion] === value
+                <div className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${selectedAnswers[currentQuestion] === value
                     ? 'border-amber-500 bg-amber-500'
                     : 'border-gray-300'
-                }`}>
+                  }`}>
                   {selectedAnswers[currentQuestion] === value && (
                     <CheckCircle className="h-4 w-4 text-white" />
                   )}
