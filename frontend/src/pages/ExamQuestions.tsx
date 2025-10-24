@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useBeforeUnload } from 'react-router-dom';
 import { Clock, CheckCircle, ArrowLeft, AlertTriangle, X, BookOpen } from 'lucide-react';
 
+
 interface QuestionOption {
   option1: string;
   option2: string;
@@ -9,15 +10,16 @@ interface QuestionOption {
   option4: string;
 }
 
+
 interface Question {
   questionNo: number;
-  questionHash: string; // ← Must have this from backend
+  questionHash: string;
   question: string;
   options: QuestionOption;
   difficulty: string;
   practiceArea: string;
-  // ❌ NO correctAnswer or explanation here!
 }
+
 
 interface PracticeArea {
   serialNo: number;
@@ -25,6 +27,7 @@ interface PracticeArea {
   selectedQuestionCount: number;
   questions: Question[];
 }
+
 
 interface ExamData {
   examId: string;
@@ -42,11 +45,13 @@ interface ExamData {
   updatedAt: string;
 }
 
+
 interface Breakdown {
   basic: number;
   intermediate: number;
   advanced: number;
 }
+
 
 interface Exam {
   _id: string;
@@ -59,10 +64,12 @@ interface Exam {
   updatedAt: string;
 }
 
+
 export default function ExamTest() {
   const location = useLocation();
   const navigate = useNavigate();
   const exam = location.state?.exam as Exam | undefined;
+
 
   const [examData, setExamData] = useState<ExamData | null>(null);
   const [flattenedQuestions, setFlattenedQuestions] = useState<Question[]>([]);
@@ -81,12 +88,14 @@ export default function ExamTest() {
   const [userName, setUserName] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<string | null>(null);
 
+
   // Redirect if no exam data
   useEffect(() => {
     if (!exam) {
       navigate('/dashboard');
     }
   }, [exam, navigate]);
+
 
   // Prevent page refresh/close during test
   useBeforeUnload(
@@ -96,6 +105,7 @@ export default function ExamTest() {
       }
     }, [testStarted, submitting])
   );
+
 
   // Handle browser back button
   useEffect(() => {
@@ -107,15 +117,18 @@ export default function ExamTest() {
       }
     };
 
+
     if (testStarted && !submitting) {
       window.history.pushState(null, '', window.location.href);
       window.addEventListener('popstate', handlePopState);
+
 
       return () => {
         window.removeEventListener('popstate', handlePopState);
       };
     }
   }, [testStarted, submitting]);
+
 
   // Fisher-Yates shuffle
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -127,11 +140,13 @@ export default function ExamTest() {
     return shuffled;
   };
 
-  // ✅ Verify user's test limit first, then only fetch exam if allowed
+
+  // Verify user's test limit first, then only fetch exam if allowed
   useEffect(() => {
     const verifyAndFetchExam = async () => {
       try {
         setLoading(true);
+
 
         // Step 1: Verify user limit
         const limitResponse = await fetch('http://localhost:5000/api/verify-limit', {
@@ -142,7 +157,9 @@ export default function ExamTest() {
           },
         });
 
+
         const limitData = await limitResponse.json();
+
 
         if (!limitData.success || limitData.limit === 0) {
           setError(
@@ -153,13 +170,15 @@ export default function ExamTest() {
           setUserName(limitData.userName);
           setSubscription(limitData.subscription);
           setLoading(false);
-          return; // ✅ Stop here — don’t fetch exam
+          return;
         }
 
-        // ✅ Store user info
+
+        // Store user info
         setUserLimit(limitData.limit);
         setUserName(limitData.userName);
         setSubscription(limitData.subscription);
+
 
         // Step 2: Now fetch exam data (only if user has limit)
         if (!exam) {
@@ -168,6 +187,7 @@ export default function ExamTest() {
           return;
         }
 
+
         const examResponse = await fetch('http://localhost:5000/api/exams/get-exam', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -175,13 +195,17 @@ export default function ExamTest() {
           body: JSON.stringify({ examName: exam.examName }),
         });
 
+
         if (!examResponse.ok) throw new Error(`HTTP error! status: ${examResponse.status}`);
+
 
         const examResult = await examResponse.json();
         if (!examResult.success) throw new Error(examResult.message || 'Failed to fetch exam data');
 
-        // ✅ Set exam data
+
+        // Set exam data
         setExamData(examResult.data);
+
 
         // Flatten all questions
         const allQuestions: Question[] = [];
@@ -190,6 +214,7 @@ export default function ExamTest() {
             allQuestions.push({ ...question, practiceArea: area.areaName });
           });
         });
+
 
         // Shuffle and set
         const shuffled = shuffleArray(allQuestions);
@@ -203,8 +228,10 @@ export default function ExamTest() {
       }
     };
 
+
     verifyAndFetchExam();
   }, [exam]);
+
 
 
   // Timer effect
@@ -218,16 +245,19 @@ export default function ExamTest() {
     return () => clearTimeout(timer);
   }, [testStarted, timeLeft]);
 
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+
   const handleStartTest = () => {
     setTestStarted(true);
     setTestStartTime(new Date().toISOString());
   };
+
 
   const handleAnswerSelect = (optionValue: string) => {
     setSelectedAnswers({
@@ -235,6 +265,7 @@ export default function ExamTest() {
       [currentQuestion]: optionValue,
     });
   };
+
 
   const handleNext = () => {
     if (currentQuestion < flattenedQuestions.length - 1) {
@@ -244,6 +275,7 @@ export default function ExamTest() {
     }
   };
 
+
   const handlePrevious = () => {
     if (currentQuestion > 0) {
       const prevQuestion = currentQuestion - 1;
@@ -252,45 +284,56 @@ export default function ExamTest() {
     }
   };
 
+
   const handleQuestionNavigation = (questionIndex: number) => {
     setCurrentQuestion(questionIndex);
     setVisitedQuestions(prev => new Set([...prev, questionIndex]));
   };
 
+
   const handleSubmitTest = () => {
     setShowConfirmModal(true);
   };
 
+
   const handleCancelSubmit = () => {
     setShowConfirmModal(false);
   };
+
 
   const handleConfirmNavigation = () => {
     setShowNavigationWarning(false);
     navigate('/dashboard', { replace: true });
   };
 
+
   const handleCancelNavigation = () => {
     setShowNavigationWarning(false);
   };
 
-  // ✅ CORRECT - Submit to backend for validation
+
+  // Submit to backend for validation
   const handleConfirmSubmit = async () => {
     setShowConfirmModal(false);
     setShowNavigationWarning(false);
 
+
     if (submitting) return;
+
 
     setSubmitting(true);
 
+
     try {
       const endTime = new Date().toISOString();
+
 
       // Prepare user answers with questionHash
       const userAnswers = flattenedQuestions.map((question, index) => ({
         questionHash: question.questionHash,
         userAnswer: selectedAnswers[index] || null,
       }));
+
 
       const submissionData = {
         examName: examData?.examName,
@@ -299,9 +342,11 @@ export default function ExamTest() {
         endTime: endTime,
       };
 
+
       console.log('Submitting exam:', submissionData);
 
-      // ✅ Send to backend for validation
+
+      // Send to backend for validation
       const response = await fetch('http://localhost:5000/api/exams/submit-exam', {
         method: 'POST',
         headers: {
@@ -311,11 +356,14 @@ export default function ExamTest() {
         body: JSON.stringify(submissionData),
       });
 
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+
       const result = await response.json();
+
 
       if (result.success) {
         // Decrease credit after successful submission
@@ -327,19 +375,22 @@ export default function ExamTest() {
           }
         });
 
+
         const creditResult = await creditResponse.json();
         if (!creditResult.success) {
           console.error('Failed to decrease credit:', creditResult.message);
         }
 
-        // ✅ Navigate with backend-validated results
+
+        // Navigate with backend-validated results
         navigate(`/exam-results/${examData?.examId}`, {
-          state: result.data, // ← Backend calculated everything
+          state: result.data,
           replace: true,
         });
       } else {
         throw new Error(result.message || 'Failed to submit exam');
       }
+
 
     } catch (error: any) {
       console.error('Error submitting exam:', error);
@@ -349,10 +400,12 @@ export default function ExamTest() {
     }
   };
 
+
   const getQuestionButtonStyle = (index: number) => {
     const isAnswered = selectedAnswers[index] !== undefined;
     const isCurrent = index === currentQuestion;
     const isVisited = visitedQuestions.has(index);
+
 
     if (isCurrent) {
       return 'bg-amber-600 text-white';
@@ -365,11 +418,9 @@ export default function ExamTest() {
     }
   };
 
+
   const answeredCount = Object.keys(selectedAnswers).length;
   const unansweredCount = flattenedQuestions.length - answeredCount;
-
-  // ... Rest of your UI code (loading, error, pre-test, test interface remains the same)
-  // Just make sure you're NOT showing correctAnswer anywhere!
 
 
   // Loading state
@@ -386,6 +437,7 @@ export default function ExamTest() {
       </div>
     );
   }
+
 
   // Error state
   if (error) {
@@ -430,6 +482,7 @@ export default function ExamTest() {
     );
   }
 
+
   // Pre-test screen
   if (!testStarted && examData) {
     const getDominantDifficulty = () => {
@@ -440,7 +493,9 @@ export default function ExamTest() {
       return 'basic';
     };
 
+
     const difficulty = getDominantDifficulty();
+
 
     const getDifficultyBg = (level: string) => {
       const backgrounds = {
@@ -451,6 +506,7 @@ export default function ExamTest() {
       return backgrounds[level as keyof typeof backgrounds] || 'bg-gray-50 border-gray-200';
     };
 
+
     const getDifficultyColor = (level: string) => {
       const colors = {
         basic: 'text-green-600',
@@ -459,6 +515,7 @@ export default function ExamTest() {
       };
       return colors[level as keyof typeof colors] || 'text-gray-600';
     };
+
 
     return (
       <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -473,6 +530,7 @@ export default function ExamTest() {
             </button>
           </div>
 
+
           <div className={`bg-white rounded-lg shadow-sm border p-8 ${getDifficultyBg(difficulty)}`}>
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -485,6 +543,7 @@ export default function ExamTest() {
                 You're about to start the {examData.examName}. Questions will appear in random order from {examData.totalPracticeAreas} practice areas.
               </p>
             </div>
+
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-8">
@@ -505,6 +564,7 @@ export default function ExamTest() {
               </div>
             </div>
 
+
             {/* Breakdown */}
             <div className="mb-8">
               <h3 className="font-semibold text-gray-900 mb-3 text-center">Question Difficulty Breakdown</h3>
@@ -524,6 +584,7 @@ export default function ExamTest() {
               </div>
             </div>
 
+
             {/* Practice Areas */}
             <div className="mb-8 bg-white p-6 rounded-lg border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-3">Practice Areas Covered ({examData.totalPracticeAreas})</h3>
@@ -536,6 +597,7 @@ export default function ExamTest() {
                 ))}
               </div>
             </div>
+
 
             {/* Instructions */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -551,6 +613,7 @@ export default function ExamTest() {
                 </ul>
               </div>
 
+
               <div className={`p-6 rounded-lg border ${getDifficultyBg(difficulty)}`}>
                 <h3 className="font-semibold text-gray-900 mb-3">Instructions</h3>
                 <ul className="space-y-2 text-sm text-gray-600">
@@ -562,6 +625,7 @@ export default function ExamTest() {
                 </ul>
               </div>
             </div>
+
 
             {/* Start Button */}
             <div className="text-center">
@@ -578,14 +642,17 @@ export default function ExamTest() {
     );
   }
 
+
   // Test interface
   if (!examData) return null;
+
 
   const currentQ = flattenedQuestions[currentQuestion];
   if (!currentQ) return null;
 
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -614,6 +681,7 @@ export default function ExamTest() {
           </div>
         </div>
 
+
         <div className="border-t border-amber-200 pt-4">
           <button
             onClick={() => navigate('/dashboard')}
@@ -625,142 +693,167 @@ export default function ExamTest() {
         </div>
       </div>
 
-      {/* Question */}
-      <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-8 mb-6">
-        <div className="mb-4 flex justify-between items-center">
-          <div>
-            <span className="text-sm text-gray-500">Question {currentQuestion + 1}</span>
-            {currentQ.practiceArea && (
-              <span className="ml-4 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">
-                {currentQ.practiceArea}
-              </span>
-            )}
-          </div>
-          <span className={`text-xs px-2 py-1 rounded ${currentQ.difficulty === 'basic' ? 'bg-green-100 text-green-800' :
-              currentQ.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-            }`}>
-            {currentQ.difficulty}
-          </span>
-        </div>
 
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">
-          {currentQ.question}
-        </h2>
-
-        <div className="space-y-3">
-          {Object.entries(currentQ.options).map(([key, value], index) => (
-            <button
-              key={key}
-              onClick={() => handleAnswerSelect(value)}
-              className={`w-full text-left p-4 rounded-lg border-2 transition-all ${selectedAnswers[currentQuestion] === value
-                  ? 'border-amber-500 bg-amber-50 text-amber-900'
-                  : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50'
-                }`}
-            >
-              <div className="flex items-center">
-                <div className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${selectedAnswers[currentQuestion] === value
-                    ? 'border-amber-500 bg-amber-500'
-                    : 'border-gray-300'
-                  }`}>
-                  {selectedAnswers[currentQuestion] === value && (
-                    <CheckCircle className="h-4 w-4 text-white" />
-                  )}
-                </div>
-                <span className="font-medium mr-3">{String.fromCharCode(65 + index)}.</span>
-                <span>{value}</span>
+      {/* Main Content - Split Layout */}
+      <div className="flex gap-6 items-start">
+        {/* Left Side - Question and Navigation */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Question */}
+          <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-8 mb-6 flex-grow">
+            <div className="mb-4 flex justify-between items-center">
+              <div>
+                <span className="text-sm text-gray-500">Question {currentQuestion + 1}</span>
+                {currentQ.practiceArea && (
+                  <span className="ml-4 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">
+                    {currentQ.practiceArea}
+                  </span>
+                )}
               </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex space-x-3">
-            <button
-              onClick={handlePrevious}
-              disabled={currentQuestion === 0}
-              className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={currentQuestion === flattenedQuestions.length - 1}
-              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-
-          <button
-            onClick={handleSubmitTest}
-            disabled={submitting}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
-          >
-            Submit Exam
-          </button>
-        </div>
-
-        {/* Question Grid */}
-        <div className="mt-4 pt-4 border-t border-amber-200">
-          <div className="flex flex-wrap gap-2">
-            {flattenedQuestions.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => handleQuestionNavigation(index)}
-                className={`w-10 h-10 rounded-lg text-sm font-semibold transition-colors ${getQuestionButtonStyle(index)}`}
-              >
-                {index + 1}
-              </button>
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center space-x-4 mt-3 text-xs text-gray-500">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
-              <span>Answered</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-amber-600 rounded mr-1"></div>
-              <span>Current</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-red-600 rounded mr-1"></div>
-              <span>Visited</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-white border border-gray-300 rounded mr-1"></div>
-              <span>Not Visited</span>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-4 pt-4 border-t border-amber-200 grid grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-gray-500">Answered:</span>
-              <span className="ml-2 font-semibold text-green-600">{answeredCount}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Unanswered:</span>
-              <span className="ml-2 font-semibold text-red-600">{unansweredCount}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Visited:</span>
-              <span className="ml-2 font-semibold text-blue-600">{visitedQuestions.size}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Remaining:</span>
-              <span className="ml-2 font-semibold text-gray-600">
-                {flattenedQuestions.length - visitedQuestions.size}
+              <span className={`text-xs px-2 py-1 rounded ${
+                currentQ.difficulty === 'basic' ? 'bg-green-100 text-green-800' :
+                currentQ.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {currentQ.difficulty}
               </span>
             </div>
+
+
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              {currentQ.question}
+            </h2>
+
+
+            <div className="space-y-3">
+              {Object.entries(currentQ.options).map(([key, value], index) => (
+                <button
+                  key={key}
+                  onClick={() => handleAnswerSelect(value)}
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                    selectedAnswers[currentQuestion] === value
+                      ? 'border-amber-500 bg-amber-50 text-amber-900'
+                      : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <div className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
+                      selectedAnswers[currentQuestion] === value
+                        ? 'border-amber-500 bg-amber-500'
+                        : 'border-gray-300'
+                    }`}>
+                      {selectedAnswers[currentQuestion] === value && (
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                    <span className="font-medium mr-3">{String.fromCharCode(65 + index)}.</span>
+                    <span>{value}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+
+          {/* Navigation Buttons */}
+          <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex space-x-3">
+                <button
+                  onClick={handlePrevious}
+                  disabled={currentQuestion === 0}
+                  className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={currentQuestion === flattenedQuestions.length - 1}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+
+
+              <button
+                onClick={handleSubmitTest}
+                disabled={submitting}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submit Exam
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+        {/* Right Side - Question Grid */}
+        <div className="w-80 flex-shrink-0">
+          <div className="bg-white rounded-lg shadow-sm border border-amber-200 p-6 sticky top-4 flex flex-col" style={{ height: 'calc(100vh - 200px)', maxHeight: '800px' }}>
+            <h3 className="font-semibold text-gray-900 mb-4">Question Navigator</h3>
+            
+            {/* Question Grid - Scrollable */}
+            <div className="flex-grow overflow-y-auto mb-4 pr-2">
+              <div className="flex flex-wrap gap-2">
+                {flattenedQuestions.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleQuestionNavigation(index)}
+                    className={`w-10 h-10 rounded-lg text-sm font-semibold transition-colors flex-shrink-0 ${getQuestionButtonStyle(index)}`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+
+            {/* Legend */}
+            <div className="space-y-2 mb-4 pb-4 border-b border-amber-200">
+              <div className="flex items-center text-xs text-gray-600">
+                <div className="w-4 h-4 bg-green-500 rounded mr-2 flex-shrink-0"></div>
+                <span>Answered</span>
+              </div>
+              <div className="flex items-center text-xs text-gray-600">
+                <div className="w-4 h-4 bg-amber-600 rounded mr-2 flex-shrink-0"></div>
+                <span>Current</span>
+              </div>
+              <div className="flex items-center text-xs text-gray-600">
+                <div className="w-4 h-4 bg-red-600 rounded mr-2 flex-shrink-0"></div>
+                <span>Visited</span>
+              </div>
+              <div className="flex items-center text-xs text-gray-600">
+                <div className="w-4 h-4 bg-white border border-gray-300 rounded mr-2 flex-shrink-0"></div>
+                <span>Not Visited</span>
+              </div>
+            </div>
+
+
+            {/* Stats */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Answered:</span>
+                <span className="font-semibold text-green-600">{answeredCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Unanswered:</span>
+                <span className="font-semibold text-red-600">{unansweredCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Visited:</span>
+                <span className="font-semibold text-blue-600">{visitedQuestions.size}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Remaining:</span>
+                <span className="font-semibold text-gray-600">
+                  {flattenedQuestions.length - visitedQuestions.size}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
 
       {/* Modals - Navigation Warning */}
       {showNavigationWarning && (
@@ -772,10 +865,12 @@ export default function ExamTest() {
               </div>
             </div>
 
+
             <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Leave Exam?</h3>
             <p className="text-gray-700 mb-4 text-center">
               Your progress will be lost forever.
             </p>
+
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
               <div className="text-sm space-y-1">
@@ -790,16 +885,17 @@ export default function ExamTest() {
               </div>
             </div>
 
+
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelNavigation}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Continue Exam
               </button>
               <button
                 onClick={handleConfirmNavigation}
-                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Leave
               </button>
@@ -808,16 +904,18 @@ export default function ExamTest() {
         </div>
       )}
 
+
       {/* Submit Confirmation Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Submit Exam?</h3>
-              <button onClick={handleCancelSubmit} className="text-gray-400 hover:text-gray-600">
+              <button onClick={handleCancelSubmit} className="text-gray-400 hover:text-gray-600 transition-colors">
                 <X className="h-6 w-6" />
               </button>
             </div>
+
 
             <div className="flex items-center justify-center mb-4">
               <div className="bg-green-100 rounded-full p-3">
@@ -825,9 +923,11 @@ export default function ExamTest() {
               </div>
             </div>
 
+
             <p className="text-gray-700 mb-4 text-center">
               Once submitted, you cannot change your answers.
             </p>
+
 
             <div className="bg-gray-50 rounded-lg p-4 mb-4">
               <h4 className="font-semibold text-gray-900 mb-2">Summary:</h4>
@@ -851,6 +951,7 @@ export default function ExamTest() {
               </div>
             </div>
 
+
             {unansweredCount > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
                 <div className="flex items-center">
@@ -862,16 +963,17 @@ export default function ExamTest() {
               </div>
             )}
 
+
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelSubmit}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Review
               </button>
               <button
                 onClick={handleConfirmSubmit}
-                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 Submit
               </button>
@@ -879,6 +981,7 @@ export default function ExamTest() {
           </div>
         </div>
       )}
+
 
       {/* Low Time Warning */}
       {timeLeft < 300 && timeLeft > 0 && (
@@ -889,6 +992,7 @@ export default function ExamTest() {
           </div>
         </div>
       )}
+
 
       {/* Submitting Overlay */}
       {submitting && (

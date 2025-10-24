@@ -244,7 +244,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid md:grid-cols-4 gap-6 mb-8">
+      {/* <div className="grid md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-amber-200">
           <div className="flex items-center">
             <div className="bg-amber-100 p-3 rounded-lg">
@@ -294,7 +294,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Subscription Alert */}
       {user?.subscription === 'free' && (
