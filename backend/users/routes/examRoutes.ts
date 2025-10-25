@@ -3,6 +3,7 @@ import { addExamFromCSV, addQuestionsToExam, getAllExams, addQuestionsToPractice
 import { isAdminAuth } from '../middleware/adminAuthMiddleware';
 import { authenticateToken } from '../middleware/isAuth';
 import { getExamQuestions, submitExamResults } from '../controller/ExamQuestionController';
+import { recentExams } from '../controller/RecentDetailsController';
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ router.post('/:examId/add-questions', isAdminAuth, upload.single('csvFile'), add
 router.post('/create', isAdminAuth, upload.single('csvFile'), addExamFromCSV);
 router.post('/get-exam',authenticateToken, getExamQuestions);
 router.post('/submit-exam',authenticateToken, submitExamResults);
+router.get('/recent-exams', recentExams);
 router.get('/test', authenticateToken, getAllExams); // Test route without auth
 router.get('/', isAdminAuth, getAllExams);
 

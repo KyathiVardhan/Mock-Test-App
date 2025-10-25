@@ -3,10 +3,11 @@ import { registerTest, uploadCSV } from '../controller/testReservation';
 import { validateTestRegistration } from '../middleware/testValidation';
 import { authenticateToken } from '../middleware/isAuth';
 import { getAllTests } from '../controller/getAllTests';
-// import { getQuestionsByDifficulty, getSubjectDifficulties } from '../controller/testController';
 import { isAdminAuth } from '../middleware/adminAuthMiddleware';
 import { Request, Response, NextFunction } from 'express';
 import { getQuestionsForTest, getSubjectDifficulties, submitTest } from '../controller/testController';
+import { verifyToken } from '../controller/jwtToken';
+import { recentTests } from '../controller/RecentDetailsController';
 
 // Error handling middleware
 const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
@@ -33,18 +34,6 @@ router.get("/admin/tests", isAdminAuth, getAllTests);
 // User routes for accessing tests
 router.get("/all-tests", authenticateToken, getAllTests);
 
-// // Public routes for subject information
-// router.get("/subject/:subject/difficulties",
-//     authenticateToken,    // User must be authenticated
-//     getSubjectDifficulties
-// );
-
-// // Protected route for accessing test questions
-// router.get("/subject/:subject/difficulty/:difficulty",
-//     authenticateToken,    // User must be authenticated
-//     getQuestionsByDifficulty
-// );
-
 // Get questions for test (without answers/explanations)
 router.get('/subject/:subject/difficulty/:difficulty', authenticateToken, getQuestionsForTest);
 
@@ -54,6 +43,8 @@ router.post('/submit', submitTest);
 // Get available difficulties for subject
 router.get('/subject/:subject/difficulties', authenticateToken, getSubjectDifficulties);
 
+// Get Recent available tests
+router.get('/recent-test', recentTests)
 // Apply error handling middleware
 router.use(errorHandler);
 
